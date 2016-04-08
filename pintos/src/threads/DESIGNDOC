@@ -3,7 +3,7 @@
             | PROJECT 1: THREADS |
             |   DESIGN DOCUMENT  |
             +--------------------+
-                   
+
 ---- GROUP ----
 
 >> Fill in the names and email addresses of your group members.
@@ -29,6 +29,11 @@ FirstName LastName <email@domain.example>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+Added to struct thread:
+  struct lock sleep_lock; //sleep on this lock
+  struct condition ready_to_wake; //waits on this condition until it wakes
+  int waking_tick; //tick to wake at. set to system ticks + ticks to sleep for
+
 
 ---- ALGORITHMS ----
 
