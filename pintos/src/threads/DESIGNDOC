@@ -43,6 +43,35 @@ Added to struct thread:
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
 
+A2:
+  timer_sleep() first checks whether the number of ticks to sleep for is
+  greater than 0. If not, it returns immediately. It then calculates the tick at which
+  the thread should wake up, by adding ticks to start. This is stored in the thread's
+  member variable waking_tick.
+
+  At this point, interrupts are disabled because we are adding the thread to the sleep_list,
+  a bit of shared state between the kernel thread and the timer interrupt handler. Once
+  disabled, the thread is inserted into the sleep_list. The thread then blocks via a call
+  to thread_block. The thread will wait to be awoken by the timer interrupt handler, which
+  at each tick will check each thread on the sleep list to see if their waiting_tick value
+  is greater than the total ticks in the system. Once this happens, the thread is unblocked,
+  placing it on the ready list, and removed from the sleep list.
+
+A3:
+  By storing the tick at which the thread should wake, there is a simple comparison
+  check that must be made for each sleeping thread at each tick. If we hadn't stored this
+  information, and instead just stored the number of ticks that the thread was required to
+  sleep for, additional operations would be required to calculate whether the thread was
+  ready to wake.
+
+  An additional optimization we could make would be to insert threads into sleep_list in
+  ascending order by number of ticks that they are required to sleep. This would have the
+  benefit of not needing to traverse the entire list at every tick, because if the method
+  encountered a thread that was not ready to wake, then necessarily the rest of the threads
+  in the list would also not be ready to wake. This would add some complexity to the design,
+  but might turn out to be necessary to reduce the amount of time spent in the timer interrupt
+  handler.
+
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
