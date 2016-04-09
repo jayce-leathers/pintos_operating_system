@@ -87,13 +87,24 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
+    //int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     //for sleeping
     struct lock sleep_lock; //sleep on this lock
     struct condition ready_to_wake; //
     int waking_tick; //tick to wake at
+
+    //for priority scheduler
+    /*The threads functioning priority the higher of its base_priority and any
+    priority donated to it */
+    int effective_priority;
+    /*the threads base priority specified at creation and mutated through a call
+    to set_priority() */
+    int base_priority;
+    /*A reference to any lock a thread is waiting on. NULL if the thread is not
+    waiting on a lock. Used to handle nested priority donation */
+    struct lock waiting_lock;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

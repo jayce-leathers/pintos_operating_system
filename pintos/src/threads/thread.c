@@ -253,6 +253,8 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
+  //if t->effective_priority > current_thread()-effective_priority
+    //thread_yield(current_thread())
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -350,9 +352,22 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->base_priority = new_priority;
+  if(base_priority > effective_priority) {
+    effective_priority = base_priority
+  }
+
 }
 
+//
+void thread_donate_priority(struct thread *, int donated_priority, int rec_level) {
+  //if rec_level < 0
+    //return
+  //else if (donated_priority > effective_priority)
+    //effective_priority = donated_priority
+    //if(thread->lock_waiting_on != NULL)
+      //thread_donate_priority(thread->lock_waiting_on->current_holder, donated_priority, rec_level)
+}
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
@@ -508,6 +523,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
+    //TODO return highest priority thread
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 

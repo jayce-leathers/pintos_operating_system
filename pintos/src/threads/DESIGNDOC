@@ -111,17 +111,42 @@ Added to thread.c
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+#define DONATION_REC_LEVEL 8 // the level to donate priority to
+
+Added to struct thread
+  /*The threads functioning priority the higher of its base_priority and any
+  priority donated to it */
+  int effective_priority;
+
+  /*the threads base priority specified at creation and mutated through a call
+  to set_priority(). renamed from priority */
+  int base_priority;
+
+  /*A reference to any lock a thread is waiting on. NULL if the thread is not
+  waiting on a lock. Used to handle nested priority donation */
+  struct lock * waiting_lock;
+
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
-
+//TODO add image
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
+  We always pull the thread with the highest priority from the list of waiters
+  in the semaphore. Since locks and condition variables are implemented with
+  semaphores this insures that they also always wake up the thread with highest
+  priority.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
+  lock_acquire is changed to first check if the lock is available. If it is
+  it acquires it. Otherwise it checks the priority of the locks current_holder.
+  If the current thread's priority is higher it calls donate_priority() on
+  the locks current_holder. donate_priority() recursively donates priority to
+  any thread which the current_holder is waiting on by checking the waiting_lock
+  member of the current_holder to specified recursive depth.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
@@ -131,11 +156,13 @@ Added to thread.c
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
+UGH HELP
 
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
 
               ADVANCED SCHEDULER
               ==================
@@ -156,21 +183,22 @@ Added to thread.c
 timer  recent_cpu    priority   thread
 ticks   A   B   C   A   B   C   to run
 -----  --  --  --  --  --  --   ------
- 0
- 4
- 8
-12
-16
-20
-24
-28
-32
-36
+ 0     0   0   0   63  61  59      A
+ 4     4   0   0   62  61  59      A
+ 8     8   0   0   61  61  59      B
+12     8   4   0   61  60  59      A
+16     12  4   0   60  60  59      B
+20     12  8   0   60  59  59      A
+24     16  8   0   59  59  59      C
+28     16  8   4   59  59  58      B
+32     16  12  4   59  58  58      A
+36     20  12  4   58  58  58      C
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
-
+  Yes at ticks 8, 16, 24, 28, and 36. We choose the thread with the lowest recent
+  cpu value to run next.
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
 
