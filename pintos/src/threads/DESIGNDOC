@@ -29,9 +29,16 @@ FirstName LastName <email@domain.example>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
 Added to struct thread:
   int waking_tick; //tick to wake at. set to system ticks + ticks to sleep for
 
+Added to thread.c
+  /*
+  List of all sleeping threads. Keeps track of which threads the timer interrupt
+  should attempt to wake up.
+  */
+  static struct list sleep_list
 
 ---- ALGORITHMS ----
 
@@ -93,7 +100,7 @@ Added to struct thread:
   acquire locks. For this reason we decided to turn interrupts off. We also
   played around with adding multiple members to the thread struct to keep track
   of how long it sleep for but then realized that we could store only its waking
-  tick rather than calculate it at each check. 
+  tick rather than calculate it at each check.
 
              PRIORITY SCHEDULING
              ===================
