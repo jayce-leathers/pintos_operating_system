@@ -91,13 +91,11 @@ timer_sleep (int64_t ticks)
 {
   int64_t start = timer_ticks ();
   //check ticks > 0
-  //grab thread sleep_lock
-  //grab sleep_list lock
+  //turn interrupts off
   //set thread waking_tick = start + TICKS
   //add thread to sleep list
-  //release sleep list lock
-  //sleep on thread sleep cond in while loop timer_ticks() < waking_tick
-  //release thread sleep lock
+  //turn interrupts on
+  //thread_block()
 
 
   ASSERT (intr_get_level () == INTR_ON);
