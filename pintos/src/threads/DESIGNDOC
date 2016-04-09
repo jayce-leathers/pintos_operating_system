@@ -30,8 +30,6 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 Added to struct thread:
-  struct lock sleep_lock; //sleep on this lock
-  struct condition ready_to_wake; //waits on this condition until it wakes
   int waking_tick; //tick to wake at. set to system ticks + ticks to sleep for
 
 
@@ -47,14 +45,23 @@ Added to struct thread:
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+  While turning interrupts off is usually a poor method of synchronization in
+  this case we do that before adding threads to to the sleeping threads list.
+  This is to prevent preemption by any other thread. So the currently running
+  thread stays running to completion.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+Interrupts are turned off in the timer_sleep method because external interrupts
+cannot acquire locks this is the only way to insure timer_sleep can run without
+a race condition against the timer interrupt which also edits the sleep list.
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+We had considered a solution which used locks to secure the list of threads
+sleeping and the state of the 
 
              PRIORITY SCHEDULING
              ===================

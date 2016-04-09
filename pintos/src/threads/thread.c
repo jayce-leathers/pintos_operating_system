@@ -146,12 +146,11 @@ thread_tick (void)
 
 /*
   wake_sleeping_threads() {
-  //grab sleep list lock
+  //Assert interrupts off
   //iterate through sleep list
-    //check if current system tick is greater than thread's waiting tick
-      //signal thread ready to wake condition
-      //release lock
+    //check if current system tick is greater than each thread's waiting tick
       //remove thread from sleep list
+      //thread_unblock()
 }
 */
 
