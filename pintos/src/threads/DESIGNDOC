@@ -38,10 +38,6 @@ Added to struct thread:
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
->> A3: What steps are taken to minimize the amount of time spent in
->> the timer interrupt handler?
-
-A2:
   timer_sleep() first checks whether the number of ticks to sleep for is
   greater than 0. If not, it returns immediately. It then calculates the tick at which
   the thread should wake up, by adding ticks to start. This is stored in the thread's
@@ -55,7 +51,9 @@ A2:
   is greater than the total ticks in the system. Once this happens, the thread is unblocked,
   placing it on the ready list, and removed from the sleep list.
 
-A3:
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
   By storing the tick at which the thread should wake, there is a simple comparison
   check that must be made for each sleeping thread at each tick. If we hadn't stored this
   information, and instead just stored the number of ticks that the thread was required to
@@ -81,16 +79,21 @@ A3:
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
-Interrupts are turned off in the timer_sleep method because external interrupts
-cannot acquire locks this is the only way to insure timer_sleep can run without
-a race condition against the timer interrupt which also edits the sleep list.
+  Interrupts are turned off in the timer_sleep method because external interrupts
+  cannot acquire locks this is the only way to insure timer_sleep can run without
+  a race condition against the timer interrupt which also edits the sleep list.
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
-We had considered a solution which used locks to secure the list of threads
-sleeping and the state of the 
+  We had considered a solution which used locks to secure the list of threads
+  sleeping but this have much thought we realized would be incorrect as the
+  timer interrupt would always be able to preempt  timer_sleep() since it can't
+  acquire locks. For this reason we decided to turn interrupts off. We also
+  played around with adding multiple members to the thread struct to keep track
+  of how long it sleep for but then realized that we could store only its waking
+  tick rather than calculate it at each check. 
 
              PRIORITY SCHEDULING
              ===================
