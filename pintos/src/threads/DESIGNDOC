@@ -8,9 +8,8 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Jayce Rudig-Leathers <jarudigleathers@vassar.edu>
+Tim Brown <timbrown@vassar.edu>
 
 ---- PRELIMINARIES ----
 
@@ -50,9 +49,9 @@ Added to thread.c
   the thread should wake up, by adding ticks to start. This is stored in the thread's
   member variable waking_tick.
 
-  At this point, interrupts are disabled because we are adding the thread to the sleep_list,
+  At this point, we disable interrupts because we are adding the thread to the sleep_list,
   a bit of shared state between the kernel thread and the timer interrupt handler. Once
-  disabled, the thread is inserted into the sleep_list. The thread then blocks via a call
+  we disable them, the thread is inserted into the sleep_list. The thread then blocks via a call
   to thread_block. The thread will wait to be awoken by the timer interrupt handler, which
   at each tick will check each thread on the sleep list to see if their waiting_tick value
   is greater than the total ticks in the system. Once this happens, the thread is unblocked,
@@ -79,6 +78,7 @@ Added to thread.c
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+
   While turning interrupts off is usually a poor method of synchronization in
   this case we do that before adding threads to to the sleeping threads list.
   This is to prevent preemption by any other thread. So the currently running
@@ -86,6 +86,7 @@ Added to thread.c
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+
   Interrupts are turned off in the timer_sleep method because external interrupts
   cannot acquire locks this is the only way to insure timer_sleep can run without
   a race condition against the timer interrupt which also edits the sleep list.
@@ -94,6 +95,7 @@ Added to thread.c
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
   We had considered a solution which used locks to secure the list of threads
   sleeping but this have much thought we realized would be incorrect as the
   timer interrupt would always be able to preempt  timer_sleep() since it can't
@@ -129,11 +131,14 @@ Added to struct thread
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
-//TODO add image
+
+//TODO add image (Jayce has a picture on his phone of a whiteboard sketch we did)
+
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
+
   We always pull the thread with the highest priority from the list of waiters
   in the semaphore. Since locks and condition variables are implemented with
   semaphores this insures that they also always wake up the thread with highest
@@ -141,6 +146,7 @@ Added to struct thread
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
+
   lock_acquire is changed to first check if the lock is available. If it is
   it acquires it. Otherwise it checks the priority of the locks current_holder.
   If the current thread's priority is higher it calls donate_priority() on
@@ -151,17 +157,26 @@ Added to struct thread
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
 
+  The thread that releases the lock finds the highest priority thread that
+  is waiting on the lock. It unblocks that thread, and returns its donated
+  priority since it is no longer necessary.
+
 ---- SYNCHRONIZATION ----
 
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
-UGH HELP
+
+  One way to do this would be to disable interrupts. This will be necessary anyway
+  for the advanced scheduler part, but there may be a way to do it with a lock at this
+  point. We are unclear on this at the moment.
 
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+  Still fleshing the design out fully.
 
 
               ADVANCED SCHEDULER
@@ -172,6 +187,8 @@ UGH HELP
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+  Unimplemented so far
 
 ---- ALGORITHMS ----
 
@@ -197,10 +214,15 @@ ticks   A   B   C   A   B   C   to run
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
+
   Yes at ticks 8, 16, 24, 28, and 36. We choose the thread with the lowest recent
   cpu value to run next.
+
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+
+  Code has not been implemented yet, we will try to minimize the code written
+  in the interrupt handler.
 
 ---- RATIONALE ----
 
@@ -209,12 +231,17 @@ ticks   A   B   C   A   B   C   to run
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
 
+  We will have more to say here once we've done more with the floating point
+  math.
+
 >> C6: The assignment explains arithmetic for fixed-point math in
 >> detail, but it leaves it open to you to implement it.  Why did you
 >> decide to implement it the way you did?  If you created an
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+
+  Unimplemented yet, need to think through this more.
 
                SURVEY QUESTIONS
                ================
