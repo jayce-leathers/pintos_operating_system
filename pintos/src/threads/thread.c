@@ -123,6 +123,27 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+void
+wake_sleeping_threads(void) {
+  //Assert interrupts off
+  Assert(intr_get_level() == INTR_OFF);
+
+  //iterate through sleep list
+  struct list_elem e;
+  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, sleep_elem);
+      //check if current system tick is greater than each thread's waiting tick
+      if(t->waking_tick >= timer_ticks()) {
+        //remove thread from sleep list
+        t->waking_tick = 0;
+        list_remove(&t->sleep_elem);
+        thread_unblock(t);
+      }
+
+    }
+}
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -143,28 +164,6 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
-}
-
-void
-wake_sleeping_threads(void) {
-  //Assert interrupts off
-  Assert(intr_get_level() == INTR_OFF);
-
-  //iterate through sleep list
-  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, sleep_elem);
-      //check if current system tick is greater than each thread's waiting tick
-      if(t->waking_tick >= timer_ticks) {
-        //remove thread from sleep list
-        t->waking_tick = 0;
-        list_remove(t->sleep_elem)
-        thread_unblock(t);
-      }
-
-    }
-
-
 }
 
 
@@ -366,10 +365,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->base_priority = new_priority;
-  if(base_priority > effective_priority) {
-    effective_priority = base_priority
-  }
+  thread_current ()->priority = new_priority;
+  // if(base_priority > effective_priority) {
+  //   effective_priority = base_priority
+  // }
 
 }
 
