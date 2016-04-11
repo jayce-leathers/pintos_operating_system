@@ -91,8 +91,7 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     //for sleeping
-    struct lock sleep_lock; //sleep on this lock
-    struct condition ready_to_wake; //
+    struct list_elem sleep_elem;
     int waking_tick; //tick to wake at
 
     //for priority scheduler
