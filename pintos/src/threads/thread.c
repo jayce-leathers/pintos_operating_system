@@ -126,10 +126,10 @@ thread_start (void)
 void
 wake_sleeping_threads(void) {
   //Assert interrupts off
-  Assert(intr_get_level() == INTR_OFF);
+  ASSERT(intr_get_level() == INTR_OFF);
 
   //iterate through sleep list
-  struct list_elem e;
+  struct *list_elem e;
   for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, sleep_elem);
@@ -373,14 +373,15 @@ thread_set_priority (int new_priority)
 }
 
 //
-void thread_donate_priority(struct thread *, int donated_priority, int rec_level) {
+// void thread_donate_priority(struct thread *, int donated_priority, int rec_level) {
   //if rec_level < 0
     //return
   //else if (donated_priority > effective_priority)
     //effective_priority = donated_priority
     //if(thread->lock_waiting_on != NULL)
       //thread_donate_priority(thread->lock_waiting_on->current_holder, donated_priority, rec_level)
-}
+// }
+
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
