@@ -139,21 +139,34 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+  wake_sleeping_threads();
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
 
-/*
-  wake_sleeping_threads() {
+void
+wake_sleeping_threads(void) {
   //Assert interrupts off
+  Assert(intr_get_level() == INTR_OFF);
+
   //iterate through sleep list
-    //check if current system tick is greater than each thread's waiting tick
-      //remove thread from sleep list
-      //thread_unblock()
+  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, sleep_elem);
+      //check if current system tick is greater than each thread's waiting tick
+      if(t->waking_tick >= timer_ticks) {
+        //remove thread from sleep list
+        t->waking_tick = 0;
+        list_remove(t->sleep_elem)
+        thread_unblock(t);
+      }
+
+    }
+
+
 }
-*/
+
 
 /* Prints thread statistics. */
 void
@@ -494,7 +507,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
+  t->waking_tick = 0; //initialize waking tick to 0
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
