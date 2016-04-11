@@ -129,7 +129,7 @@ wake_sleeping_threads(void) {
   ASSERT(intr_get_level() == INTR_OFF);
 
   //iterate through sleep list
-  struct *list_elem e;
+  struct list_elem  *e;
   for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, sleep_elem);
