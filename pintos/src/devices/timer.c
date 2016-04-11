@@ -90,7 +90,13 @@ void
 timer_sleep (int64_t ticks)
 {
   int64_t start = timer_ticks ();
-  //check ticks > 0
+
+  //Make sure it needs to sleep
+  if (ticks <= 0) {
+    return;
+  }
+
+  //ASSERT (intr_get_level () == INTR_OFF);
   //turn interrupts off
   //set thread waking_tick = start + TICKS
   //add thread to sleep list
