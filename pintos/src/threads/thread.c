@@ -31,7 +31,7 @@ static struct list all_list;
 /*
 List of all sleeping threads.
 */
-static struct list sleep_list
+static struct list sleep_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
