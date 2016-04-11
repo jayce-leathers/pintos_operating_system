@@ -84,6 +84,14 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+/* Adds the current thread to the sleep_list */
+void
+add_to_sleep_list ()
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+  list_push_back(thread_current()->sleep_list, thread_current()->sleep_elem);
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
@@ -96,17 +104,24 @@ timer_sleep (int64_t ticks)
     return;
   }
 
-  //ASSERT (intr_get_level () == INTR_OFF);
-  //turn interrupts off
-  //set thread waking_tick = start + TICKS
-  //add thread to sleep list
-  //turn interrupts on
-  //thread_block()
+  //Turn off interrupts
+  intr_set_level (INTR_OFF);
 
+  //Calculate the tick at which to wake, and store it in the thread's
+  //waking_tick variable
+  thread_current()->waking_tick = start + ticks;
 
+  //Add thread to sleep list
+  add_to_sleep_list();
+
+  //Turn interrupts back on
+  intr_set_level (INTR_ON);
   ASSERT (intr_get_level () == INTR_ON);
+
+  //Block until woken up
   while (timer_elapsed (start) < ticks)
-    thread_yield ();
+    thread_block ();
+
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
