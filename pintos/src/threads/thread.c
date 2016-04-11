@@ -28,11 +28,6 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
-/*
-List of all sleeping threads.
-*/
-static struct list sleep_list;
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -97,7 +92,6 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -123,27 +117,6 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
-void
-wake_sleeping_threads(void) {
-  //Assert interrupts off
-  ASSERT(intr_get_level() == INTR_OFF);
-
-  //iterate through sleep list
-  struct list_elem  *e;
-  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, sleep_elem);
-      //check if current system tick is greater than each thread's waiting tick
-      if(t->waking_tick >= timer_ticks()) {
-        //remove thread from sleep list
-        t->waking_tick = 0;
-        list_remove(&t->sleep_elem);
-        thread_unblock(t);
-      }
-
-    }
-}
-
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -160,7 +133,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-  wake_sleeping_threads();
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
