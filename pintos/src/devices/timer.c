@@ -89,7 +89,7 @@ void
 add_to_sleep_list ()
 {
   ASSERT (intr_get_level () == INTR_OFF);
-  list_push_back(thread_current()->sleep_list, thread_current()->sleep_elem);
+  list_push_back(&sleep_list, &thread_current()->sleep_elem);
 }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
