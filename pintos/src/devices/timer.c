@@ -121,12 +121,13 @@ timer_sleep (int64_t ticks)
   add_to_sleep_list();
 
   //Turn interrupts back on
-  // intr_set_level (INTR_ON);
-  // ASSERT (intr_get_level () == INTR_ON);
+  intr_set_level (INTR_ON);
+  ASSERT (intr_get_level () == INTR_ON);
 
+  //use semaphore
   //Block until woken up
-  while (timer_elapsed (start) < ticks)
-    thread_block ();
+
+  sema_down(&thread_current()->sema);
 
 }
 
@@ -215,7 +216,7 @@ wake_sleeping_threads(void) {
         //remove thread from sleep list
         t->waking_tick = 0;
         list_remove(&t->sleep_elem);
-        thread_unblock(t);
+        sema_up(&t->sema);
       }
 
     }
