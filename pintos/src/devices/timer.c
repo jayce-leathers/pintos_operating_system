@@ -121,8 +121,8 @@ timer_sleep (int64_t ticks)
   add_to_sleep_list();
 
   //Turn interrupts back on
-  intr_set_level (INTR_ON);
-  ASSERT (intr_get_level () == INTR_ON);
+  // intr_set_level (INTR_ON);
+  // ASSERT (intr_get_level () == INTR_ON);
 
   //Block until woken up
   while (timer_elapsed (start) < ticks)
