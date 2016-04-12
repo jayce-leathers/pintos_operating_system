@@ -207,12 +207,19 @@ wake_sleeping_threads(void) {
   ASSERT(intr_get_level() == INTR_OFF);
 
   //iterate through sleep list
+  //int count = 0;
+
   struct list_elem  *e;
   for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
     {
+      //count++;
+      //printf("%i\n", count);
       struct thread *t = list_entry (e, struct thread, sleep_elem);
       //check if current system tick is greater than each thread's waiting tick
-      if(t->waking_tick >= timer_ticks()) {
+      //printf("waking: %i\n", t->waking_tick);
+      //printf("system: %i\n", timer_ticks());
+      if(t->waking_tick <= timer_ticks()) {
+        //printf("time to wake up");
         //remove thread from sleep list
         t->waking_tick = 0;
         list_remove(&t->sleep_elem);
