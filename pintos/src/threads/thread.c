@@ -339,6 +339,7 @@ void
 thread_set_priority (int new_priority)
 {
   thread_current ()->priority = new_priority;
+
   // if(base_priority > effective_priority) {
   //   effective_priority = base_priority
   // }
@@ -479,6 +480,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->effective_priority = priority; //initialize effective_priority
   t->magic = THREAD_MAGIC;
   t->waking_tick = 0; //initialize waking tick to 0
   sema_init (&t->sema, 0); //initialize semaphore
@@ -500,6 +502,18 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+//Returns true if a < b, false otherwise.
+//Sourced from the tests from list.c
+static bool
+value_less (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct value *a = list_entry (a_, struct value, elem);
+  const struct value *b = list_entry (b_, struct value, elem);
+  
+  return a->value < b->value;
+}
+
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -509,10 +523,20 @@ static struct thread *
 next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
+  {
     return idle_thread;
+  }
   else
-    //TODO return highest priority thread
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  {
+    //Find the max element (TODO: make sure this is choosing based on effective_priority)
+    struct elem * max_elem = list_max(&ready_list, value_less, NULL);
+    //Remove it from the list
+    list_remove (max_elem);
+    //Return the max element (TODO: check list_entry wrapping)
+    return list_entry (max_elem, struct thread, elem);
+
+    //return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page
