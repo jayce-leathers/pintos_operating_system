@@ -239,7 +239,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-  //if t->effective_priority > current_thread()-effective_priority
+  //if t->effective_priority > current_thread()-> effective_priority
     //thread_yield(current_thread())
   t->status = THREAD_READY;
   intr_set_level (old_level);
