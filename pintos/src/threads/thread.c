@@ -511,7 +511,7 @@ priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
   const struct thread *a = list_entry (a_, struct thread, elem);
   const struct thread *b = list_entry (b_, struct thread, elem);
   
-  return a->value < b->value;
+  return a->effective_priority < b->effective_priority;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -529,11 +529,13 @@ next_thread_to_run (void)
   else
   {
     //Find the max element (TODO: make sure this is choosing based on effective_priority)
-    struct elem * max_elem = list_max(&ready_list, value_less, NULL);
+    struct elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
+    struct thread * max_thread = list_entry (max_elem, struct thread, elem);
+
     list_remove (max_elem);
     //Return the max element (TODO: check list_entry wrapping)
-    return list_entry (max_elem, struct thread, elem);
+    return  max_thread;
 
     //return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
