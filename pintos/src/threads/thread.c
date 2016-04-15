@@ -505,11 +505,11 @@ alloc_frame (struct thread *t, size_t size)
 //Returns true if a < b, false otherwise.
 //Sourced from the tests from list.c
 static bool
-value_less (const struct list_elem *a_, const struct list_elem *b_,
+priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED) 
 {
-  const struct value *a = list_entry (a_, struct value, elem);
-  const struct value *b = list_entry (b_, struct value, elem);
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
   
   return a->value < b->value;
 }
