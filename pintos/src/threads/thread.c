@@ -345,7 +345,7 @@ thread_set_priority (int new_priority)
   thread_current ()->priority = new_priority;
 
   if(priority > effective_priority) {
-    effective_priority = priority
+    effective_priority = priority;
   }
 
 }
