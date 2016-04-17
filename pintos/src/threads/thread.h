@@ -94,21 +94,18 @@ struct thread
     //for sleeping
     struct list_elem sleep_elem;
     int waking_tick; //tick to wake at
-    struct semaphore sema; //semaphore
-    struct semaphore priority_sema;
+    struct semaphore sema; //semaphore for sleeping
 
     //for priority scheduler
     /*The threads functioning priority the higher of its base_priority and any
     priority donated to it */
     int effective_priority;
-    // /*the threads base priority specified at creation and mutated through a call
-    // to set_priority() */
-    //int base_priority;
     // /*A reference to any lock a thread is waiting on. NULL if the thread is not
     // waiting on a lock. Used to handle nested priority donation */
     struct lock waiting_lock;
-    struct list_elem donor_elem;
-    struct list donation_list;
+    struct list_elem donor_elem; //for insertion into donor lists
+    struct list donation_list; //list of threads which have donated to this thread
+    struct semaphore priority_sema; //semaphore for securing priority
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
