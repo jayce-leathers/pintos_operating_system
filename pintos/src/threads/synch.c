@@ -280,15 +280,27 @@ revoke_priority_donation(struct lock * releasing_lock) {
   //iterate through list of current thread's donators
   struct list * donor_list = releasing_lock->holder->donation_list;
   struct list_elem  *e;
-  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
+  for (e = list_begin (&donor_list);e != list_end (&donor_list);e = list_next (e))
     {
   //find the threads which donated priority for the current lock
-  //remove them from the list
+      struct thread * t = list_entry(e, struct thread, donor_elem);
+      if(t->waiting_lock == releasing_lock){
+        //remove them from the list
+        list_remove(e);
+      }
+    }
   //if the list is not now empty find the list's max priority thread
-    //and set the current thread's effective priority to that thread's priority
-  //else 
-    //set the current thread's priority to its base priority
-
+    if(!list_empty(&donor_list)) {
+      //and set the current thread's effective priority to that thread's priority
+      struct elem * max_elem = list_max(&donor_list, priority_thread_less, NULL);
+      //Remove it from the list
+      struct thread * max_thread = list_entry (max_elem, struct thread, donor_elem);
+      releasing_lock->holder->effective_priority = max_thread->effective_priority;
+    }
+    else {
+      //set the current thread's priority to its base priority
+      releasing_lock->holder->effective_priority = releasing_lock->holder->priority;
+    }   
 }
 
 /* Returns true if the current thread holds LOCK, false

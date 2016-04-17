@@ -163,9 +163,8 @@ Added to struct thread
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
-  One way to do this would be to disable interrupts. This will be necessary anyway
-  for the advanced scheduler part, but there may be a way to do it with a lock at this
-  point. We are unclear on this at the moment.
+  In our implementation thread_set_priority() only modifies it's own priority and is 
+  not called externally. Thus there is no race since there is no competition for 
 
 ---- RATIONALE ----
 
