@@ -240,9 +240,11 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
 
-  printf("unblocking %s with priority %i\n",t->name, t->priority);
+  printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
+  printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
 
-  if(t->effective_priority < thread_get_priority()) {
+  if(t->effective_priority > thread_get_priority()) {
+    printf("current thread should yield\n");
     //current thread needs to yield
     thread_yield();
   }
@@ -310,6 +312,7 @@ void
 thread_yield (void)
 {
   struct thread *cur = thread_current ();
+  printf("%s is attempting to yield\n", thread_current()->name);
   enum intr_level old_level;
 
   ASSERT (!intr_context ());
@@ -529,10 +532,13 @@ next_thread_to_run (void)
   }
   else
   {
+    printf("ready list not empty\n");
     //Find the max element
     struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
     struct thread * max_thread = list_entry (max_elem, struct thread, elem);
+
+    //printf("max_thread=%s with priority %i\n", max_thread->name, max_thread->effective_priority);
 
     list_remove (max_elem);
     //Return the max element (TODO: check list_entry wrapping)
@@ -609,6 +615,7 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
+  //printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
 }
 
 /* Returns a tid to use for a new thread. */
