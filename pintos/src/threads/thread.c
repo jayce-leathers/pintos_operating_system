@@ -240,7 +240,7 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
 
-  if(&t->effective_priority > thread_get_priority()) {
+  if(t->effective_priority > thread_get_priority()) {
     //current thread needs to yield
     thread_yield();
   }
@@ -343,14 +343,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  sema_up(&priority_sema);
+  sema_up(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
 
   if(new_priority > thread_current ()->effective_priority) {
     thread_current ()->effective_priority = new_priority;
   }
 
-  sema_down(&priority_sema);
+  sema_down(&thread_current ()->priority_sema);
 }
 
 /* Returns the current thread's priority. */
@@ -503,7 +503,7 @@ alloc_frame (struct thread *t, size_t size)
 
 //Returns true if a < b, false otherwise.
 //Sourced from the tests from list.c
-static bool
+bool
 priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED) 
 {

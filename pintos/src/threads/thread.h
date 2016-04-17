@@ -102,7 +102,7 @@ struct thread
     int effective_priority;
     // /*A reference to any lock a thread is waiting on. NULL if the thread is not
     // waiting on a lock. Used to handle nested priority donation */
-    struct lock waiting_lock;
+    struct lock * waiting_lock;
     struct list_elem donor_elem; //for insertion into donor lists
     struct list donation_list; //list of threads which have donated to this thread
     struct semaphore priority_sema; //semaphore for securing priority
@@ -154,5 +154,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+bool priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,void *aux UNUSED);
 
 #endif /* threads/thread.h */

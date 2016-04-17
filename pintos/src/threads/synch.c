@@ -119,7 +119,7 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters))
     {
       //Find the max element
-      struct elem * max_elem = list_max(&sema->waiters, priority_thread_less, NULL);
+      struct list_elem * max_elem = list_max(&sema->waiters, priority_thread_less, NULL);
       //Remove it from the list
       struct thread * max_thread = list_entry (max_elem, struct thread, elem);
       list_remove (max_elem);
@@ -198,7 +198,7 @@ Recursively donates priority to lock holders
 void 
 donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * donor) {
   //if donor has not previously been waiting on the lock set its waiting lock
-  if(donor->waiting_lock == NULL {
+  if(&donor->waiting_lock == NULL) {
     donor->waiting_lock = desired_lock;
   }
   struct thread * donee = desired_lock->holder;//the thread we're donating to
@@ -206,7 +206,7 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
   sema_up(&donor->priority_sema);
   if(donee->effective_priority < donor->effective_priority) { //check if the new priority is higher
     donee->effective_priority = donor->effective_priority; //set priority
-    list_push_back(&donee->donation_list, &donor->donor_elem) //add donor to donee's list of donators
+    list_push_back(&donee->donation_list, &donor->donor_elem); //add donor to donee's list of donators
     sema_down(&donor->priority_sema);
     sema_down(&donee->priority_sema);
     //if donee is waiting on a lock, recursively donate donees new priority
