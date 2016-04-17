@@ -279,7 +279,6 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  struct thread previous_holder = lock->holder;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -288,7 +287,7 @@ void
 revoke_priority_donation(struct lock * releasing_lock) {
   //iterate through list of current thread's donators
   sema_up(&releasing_lock->holder->priority_sema);
-  struct list * donor_list = releasing_lock->holder->donation_list;
+  struct list donor_list = releasing_lock->holder->donation_list;
   struct list_elem  *e;
   for (e = list_begin (&donor_list);e != list_end (&donor_list);e = list_next (e))
     {
