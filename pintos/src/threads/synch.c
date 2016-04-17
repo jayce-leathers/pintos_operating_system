@@ -301,7 +301,7 @@ revoke_priority_donation(struct lock * releasing_lock) {
   //if the list is not now empty find the list's max priority thread
     if(!list_empty(&donor_list)) {
       //and set the current thread's effective priority to that thread's priority
-      struct elem * max_elem = list_max(&donor_list, priority_thread_less, NULL);
+      struct list_elem * max_elem = list_max(&donor_list, priority_thread_less, NULL);
       //Remove it from the list
       struct thread * max_thread = list_entry (max_elem, struct thread, donor_elem);
       sema_up(&max_thread->priority_sema);
