@@ -239,6 +239,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
+  t->status = THREAD_READY;
 
   printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
   printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
@@ -248,7 +249,7 @@ thread_unblock (struct thread *t)
     //current thread needs to yield
     thread_yield();
   }
-  t->status = THREAD_READY;
+  
   intr_set_level (old_level);
 }
 
@@ -319,8 +320,9 @@ thread_yield (void)
 
   old_level = intr_disable ();
 
-  if (cur != idle_thread)
+  if (cur != idle_thread) {
     list_push_back (&ready_list, &cur->elem);
+  }
 
   cur->status = THREAD_READY;
   schedule ();
@@ -348,14 +350,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  sema_up(&thread_current ()->priority_sema);
+  sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
 
   if(new_priority > thread_current ()->effective_priority) {
     thread_current ()->effective_priority = new_priority;
   }
 
-  sema_down(&thread_current ()->priority_sema);
+  sema_up(&thread_current ()->priority_sema);
 }
 
 /* Returns the current thread's priority. */
@@ -486,7 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->waking_tick = 0; //initialize waking tick to 0
   sema_init (&t->sema, 0); //initialize semaphore
-  sema_init (&t->priority_sema, 0); //initialize semaphore
+  sema_init (&t->priority_sema, 1); //initialize semaphore
   list_init(&t->donation_list);
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -532,7 +534,7 @@ next_thread_to_run (void)
   }
   else
   {
-    printf("ready list not empty\n");
+    // printf("ready list not empty\n");
     //Find the max element
     struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
@@ -542,7 +544,7 @@ next_thread_to_run (void)
 
     list_remove (max_elem);
     //Return the max element (TODO: check list_entry wrapping)
-    return  max_thread;
+    return max_thread;
 
     //return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
@@ -612,9 +614,12 @@ schedule (void)
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
-  if (cur != next)
+  if (cur != next) {
     prev = switch_threads (cur, next);
+  }
+
   thread_schedule_tail (prev);
+
   //printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
 }
 
