@@ -346,8 +346,8 @@ thread_set_priority (int new_priority)
   sema_up(&priority_sema);
   thread_current ()->priority = new_priority;
 
-  if(priority > effective_priority) {
-    effective_priority = priority;
+  if(new_priority > thread_current ()->effective_priority) {
+    thread_current ()->effective_priority = new_priority;
   }
 
   sema_down(&priority_sema);
@@ -528,7 +528,7 @@ next_thread_to_run (void)
   else
   {
     //Find the max element
-    struct elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
+    struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
     struct thread * max_thread = list_entry (max_elem, struct thread, elem);
 
