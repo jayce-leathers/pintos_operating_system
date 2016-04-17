@@ -120,10 +120,6 @@ Added to struct thread
   priority donated to it */
   int effective_priority;
 
-  /*the threads base priority specified at creation and mutated through a call
-  to set_priority(). renamed from priority */
-  int base_priority;
-
   /*A reference to any lock a thread is waiting on. NULL if the thread is not
   waiting on a lock. Used to handle nested priority donation */
   struct lock * waiting_lock;
@@ -156,8 +152,8 @@ Added to struct thread
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
-
-  The thread that releases the lock finds the highest priority thread that
+  need a list of donor threads in thread.h
+  The thread that releases the lock checks if its base_priority is lower than its effective_priority if it is it lowers it priority  finds the highest priority thread that
   is waiting on the lock. It unblocks that thread, and returns its donated
   priority since it is no longer necessary.
 

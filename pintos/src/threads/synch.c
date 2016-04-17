@@ -117,9 +117,14 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
-  //TODO this needs to be the highest priority thread
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+    {
+      //Find the max element
+      struct elem * max_elem = list_max(&sema->waiters, priority_thread_less, NULL);
+      //Remove it from the list
+      struct thread * max_thread = list_entry (max_elem, struct thread, elem);
+      list_remove (max_elem);
+      thread_unblock (max_thread);
+    }
   sema->value++;
   intr_set_level (old_level);
 }
@@ -185,6 +190,28 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+/*
+Recursively donates priority to lock holders
+
+*/
+
+void 
+donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * donor) {
+  //if donor has not previously been waiting on the lock set its waiting lock
+  if(donor->waiting_lock == NULL {
+    donor->waiting_lock = desired_lock;
+  }
+  struct thread * donee = desired_lock->holder;//the thread we're donating to
+  if(donee->effective_priority < donor->effective_priority) { //check if the new priority is higher
+    donee->effective_priority = donor->effective_priority; //set priority
+    list_push_back(&donee->donation_list, &donor->donor_elem) //add donor to donee's list of donators
+    //if donee is waiting on a lock, recursively donate donees new priority
+    if(donee->waiting_lock != NULL && rec_level > 0) { 
+      donate_priority_rec(--rec_level, donee->waiting_lock, donee);
+    }
+  }
+}
+
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -202,9 +229,15 @@ lock_acquire (struct lock *lock)
 
   //try and down semaphore
   //if success we can get the lock
+  bool success = sema_try_down (&lock->semaphore);
+  if (success) {
+    lock->holder = thread_current ();
+  }
   //else donate priority to lock->holder recursive
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  else {
+    donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current);
+    sema_down(&lock->semaphore)//call normal sema-down to block current thread
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -237,9 +270,25 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
+  struct thread previous_holder = lock->holder;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+}
+
+void
+revoke_priority_donation(struct lock * releasing_lock) {
+  //iterate through list of current thread's donators
+  struct list * donor_list = releasing_lock->holder->donation_list;
+  struct list_elem  *e;
+  for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
+    {
+  //find the threads which donated priority for the current lock
+  //remove them from the list
+  //if the list is not now empty find the list's max priority thread
+    //and set the current thread's effective priority to that thread's priority
+  //else 
+    //set the current thread's priority to its base priority
+
 }
 
 /* Returns true if the current thread holds LOCK, false

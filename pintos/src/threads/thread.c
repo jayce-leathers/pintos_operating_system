@@ -239,17 +239,11 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-<<<<<<< HEAD
-  //if t->effective_priority > current_thread()-> effective_priority
-    //thread_yield(current_thread())
-=======
 
   if(&t->effective_priority > thread_get_priority()) {
     //current thread needs to yield
     thread_yield();
   }
-
->>>>>>> 9529181d375b5a7c7247d5cba64b43a1053c8553
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -493,6 +487,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->waking_tick = 0; //initialize waking tick to 0
   sema_init (&t->sema, 0); //initialize semaphore
+  list_init(&t->donation_list);
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -520,7 +515,7 @@ priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
   const struct thread *a = list_entry (a_, struct thread, elem);
   const struct thread *b = list_entry (b_, struct thread, elem);
   
-  return a->effective_priority < b->effective_priority;
+  return &a->effective_priority < &b->effective_priority;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -537,7 +532,7 @@ next_thread_to_run (void)
   }
   else
   {
-    //Find the max element (TODO: make sure this is choosing based on effective_priority)
+    //Find the max element
     struct elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
     struct thread * max_thread = list_entry (max_elem, struct thread, elem);

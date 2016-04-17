@@ -106,6 +106,8 @@ struct thread
     // /*A reference to any lock a thread is waiting on. NULL if the thread is not
     // waiting on a lock. Used to handle nested priority donation */
     struct lock waiting_lock;
+    struct list_elem donor_elem;
+    struct list donation_list;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
