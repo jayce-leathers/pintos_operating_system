@@ -239,8 +239,17 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
+<<<<<<< HEAD
   //if t->effective_priority > current_thread()-> effective_priority
     //thread_yield(current_thread())
+=======
+
+  if(&t->effective_priority > thread_get_priority()) {
+    //current thread needs to yield
+    thread_yield();
+  }
+
+>>>>>>> 9529181d375b5a7c7247d5cba64b43a1053c8553
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -340,9 +349,9 @@ thread_set_priority (int new_priority)
 {
   thread_current ()->priority = new_priority;
 
-  // if(base_priority > effective_priority) {
-  //   effective_priority = base_priority
-  // }
+  if(priority > effective_priority) {
+    effective_priority = priority;
+  }
 
 }
 
@@ -360,7 +369,7 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
-  return thread_current ()->priority;
+  return thread_current ()->effective_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
