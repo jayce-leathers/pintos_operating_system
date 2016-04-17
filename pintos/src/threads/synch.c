@@ -244,8 +244,8 @@ lock_acquire (struct lock *lock)
   }
   //else donate priority to lock->holder recursive
   else {
-    donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current);
-    sema_down(&lock->semaphore)//call normal sema-down to block current thread
+    donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current());
+    sema_down(&lock->semaphore);//call normal sema-down to block current thread
   }
 }
 
