@@ -95,6 +95,7 @@ struct thread
     struct list_elem sleep_elem;
     int waking_tick; //tick to wake at
     struct semaphore sema; //semaphore
+    struct semaphore priority_sema;
 
     //for priority scheduler
     /*The threads functioning priority the higher of its base_priority and any

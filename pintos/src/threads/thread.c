@@ -313,8 +313,10 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+
   if (cur != idle_thread)
     list_push_back (&ready_list, &cur->elem);
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -341,23 +343,15 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  sema_up(&priority_sema);
   thread_current ()->priority = new_priority;
 
   if(priority > effective_priority) {
     effective_priority = priority;
   }
 
+  sema_down(&priority_sema);
 }
-
-//
-// void thread_donate_priority(struct thread *, int donated_priority, int rec_level) {
-  //if rec_level < 0
-    //return
-  //else if (donated_priority > effective_priority)
-    //effective_priority = donated_priority
-    //if(thread->lock_waiting_on != NULL)
-      //thread_donate_priority(thread->lock_waiting_on->current_holder, donated_priority, rec_level)
-// }
 
 /* Returns the current thread's priority. */
 int
@@ -487,6 +481,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   t->waking_tick = 0; //initialize waking tick to 0
   sema_init (&t->sema, 0); //initialize semaphore
+  sema_init (&t->priority_sema, 0); //initialize semaphore
   list_init(&t->donation_list);
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
