@@ -240,7 +240,9 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
 
-  if(t->effective_priority > thread_get_priority()) {
+  printf("unblocking %s with priority %i\n",t->name, t->priority);
+
+  if(t->effective_priority < thread_get_priority()) {
     //current thread needs to yield
     thread_yield();
   }
