@@ -221,6 +221,18 @@ thread_block (void)
   schedule ();
 }
 
+void print_ready(void) {
+    struct list_elem *e;
+
+  //print out ready list
+  for (e = list_begin (&ready_list); e != list_end (&ready_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+      printf("-%s with priority %i\n",t->name, t->effective_priority);
+    }
+}
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -243,6 +255,9 @@ thread_unblock (struct thread *t)
 
   printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
   printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
+
+  printf("==READY_LIST (from thread_unblock):\n");
+  print_ready();
 
   if(t->effective_priority > thread_get_priority()) {
     printf("current thread should yield\n");
@@ -324,8 +339,14 @@ thread_yield (void)
     list_push_back (&ready_list, &cur->elem);
   }
 
+  printf("==READY_LIST (from thread_yield):\n");
+  print_ready();
+
   cur->status = THREAD_READY;
   schedule ();
+
+  printf("==READY_LIST (from thread_yield, after schedule()):\n");
+  print_ready();
   intr_set_level (old_level);
 }
 
@@ -397,7 +418,7 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -517,7 +538,7 @@ priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
   const struct thread *a = list_entry (a_, struct thread, elem);
   const struct thread *b = list_entry (b_, struct thread, elem);
   
-  return &a->effective_priority < &b->effective_priority;
+  return a->effective_priority < b->effective_priority;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -535,6 +556,7 @@ next_thread_to_run (void)
   else
   {
     // printf("ready list not empty\n");
+
     //Find the max element
     struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
     //Remove it from the list
@@ -620,7 +642,7 @@ schedule (void)
 
   thread_schedule_tail (prev);
 
-  //printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
+  printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
 }
 
 /* Returns a tid to use for a new thread. */

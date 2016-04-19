@@ -106,6 +106,8 @@ sema_try_down (struct semaphore *sema)
 
 
 
+
+
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
 
@@ -116,15 +118,24 @@ sema_up (struct semaphore *sema)
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
-
+  //printf("sema_up called from %s\n", thread_current()->name);
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
     {
+      //print out waiters
+      struct list_elem *e;
+      printf("==WAITERS ON SEMA\n");
+      for (e = list_begin (&sema->waiters); e != list_end (&sema->waiters); e = list_next (e))
+      {
+      struct thread *t = list_entry (e, struct thread, elem);
+      printf("-%s with priority %i\n",t->name, t->effective_priority);
+      }
+
       //Find the max element
       struct list_elem * max_elem = list_max(&sema->waiters, priority_thread_less, NULL);
       //Remove it from the list
       struct thread * max_thread = list_entry (max_elem, struct thread, elem);
-      printf("sema_up on %s max thread = %s \n", thread_current()->name, max_thread->name);
+      printf("max thread = %s\n", max_thread->name);
       list_remove (max_elem);
       thread_unblock (max_thread);
     }
