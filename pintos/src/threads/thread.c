@@ -251,19 +251,21 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-  t->status = THREAD_READY;
+  
 
-  printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
-  printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
+  // printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
+  // printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
 
-  printf("==READY_LIST (from thread_unblock):\n");
-  print_ready();
+  // printf("==READY_LIST (from thread_unblock):\n");
+  // print_ready();
 
-  if(t->effective_priority > thread_get_priority()) {
-    printf("current thread should yield\n");
+  //if(t->effective_priority > thread_get_priority()) {
+  //  printf("current thread should yield\n");
     //current thread needs to yield
-    thread_yield();
-  }
+  //  thread_yield();
+  //}
+
+  t->status = THREAD_READY;
   
   intr_set_level (old_level);
 }
@@ -339,14 +341,14 @@ thread_yield (void)
     list_push_back (&ready_list, &cur->elem);
   }
 
-  printf("==READY_LIST (from thread_yield):\n");
-  print_ready();
+  //printf("==READY_LIST (from thread_yield):\n");
+  //print_ready();
 
   cur->status = THREAD_READY;
   schedule ();
 
-  printf("==READY_LIST (from thread_yield, after schedule()):\n");
-  print_ready();
+  //printf("==READY_LIST (from thread_yield, after schedule()):\n");
+  //print_ready();
   intr_set_level (old_level);
 }
 
