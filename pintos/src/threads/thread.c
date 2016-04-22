@@ -330,7 +330,7 @@ void
 thread_yield (void)
 {
   struct thread *cur = thread_current ();
-  printf("%s is attempting to yield\n", thread_current()->name);
+  //printf("%s is attempting to yield\n", thread_current()->name);
   enum intr_level old_level;
 
   ASSERT (!intr_context ());
@@ -534,13 +534,13 @@ alloc_frame (struct thread *t, size_t size)
 //Returns true if a < b, false otherwise.
 //Sourced from the tests from list.c
 bool
-priority_thread_less (const struct list_elem *a_, const struct list_elem *b_,
+priority_thread_less (const struct list_elem *a, const struct list_elem *b,
             void *aux UNUSED) 
 {
-  const struct thread *a = list_entry (a_, struct thread, elem);
-  const struct thread *b = list_entry (b_, struct thread, elem);
+  const struct thread *thread_a = list_entry (a, struct thread, elem);
+  const struct thread *thread_b = list_entry (b, struct thread, elem);
   
-  return a->effective_priority < b->effective_priority;
+  return thread_a->priority < thread_b->priority;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -644,7 +644,7 @@ schedule (void)
 
   thread_schedule_tail (prev);
 
-  printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
+  //printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
 }
 
 /* Returns a tid to use for a new thread. */
