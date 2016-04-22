@@ -138,7 +138,7 @@ sema_up (struct semaphore *sema)
       //printf("max thread = %s\n", max_thread->name);
       list_remove (max_elem);
       thread_unblock (max_thread);
-    }
+  }
   sema->value++;
   intr_set_level (old_level);
 }
@@ -252,15 +252,17 @@ lock_acquire (struct lock *lock)
 
   //try and down semaphore
   //if success we can get the lock
-  bool success = sema_try_down (&lock->semaphore);
-  if (success) {
-    lock->holder = thread_current ();
-  }
-  //else donate priority to lock->holder recursive
-  else {
-    //donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current());
-    sema_down(&lock->semaphore);//call normal sema-down to block current thread
-  }
+  // bool success = sema_try_down (&lock->semaphore);
+  // if (success) {
+  //   lock->holder = thread_current ();
+  // }
+  // //else donate priority to lock->holder recursive
+  // else {
+  //   //donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current());
+  //   sema_down(&lock->semaphore);//call normal sema-down to block current thread
+  // }
+  sema_down (&lock->semaphore);
+  lock->holder = thread_current ();
 }
 
 /* Tries to acquires LOCK and returns true if successful or false

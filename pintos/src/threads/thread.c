@@ -201,6 +201,9 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  if(thread_current()->priority < priority) {
+    thread_yield();
+  }
 
   return tid;
 }
@@ -244,6 +247,7 @@ void print_ready(void) {
 void
 thread_unblock (struct thread *t)
 {
+  // printf("unblocking %s \n", thread_name);
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
@@ -373,12 +377,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  // printf("setting priority of %s with priority %i to %i \n", thread_name(),thread_current()->priority,new_priority);
   sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
 
-  if(new_priority > thread_current ()->effective_priority) {
-    thread_current ()->effective_priority = new_priority;
-  }
+
+  // if(new_priority > thread_current ()->effective_priority) {
+  //   thread_current ()->effective_priority = new_priority;
+  // }
 
   sema_up(&thread_current ()->priority_sema);
 }
