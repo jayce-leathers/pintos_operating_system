@@ -116,21 +116,13 @@ void
 sema_up (struct semaphore *sema)
 {
   enum intr_level old_level;
+  bool yield_flag;
 
   ASSERT (sema != NULL);
-  //printf("sema_up called from %s\n", thread_current()->name);
+
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
     {
-      //print out waiters
-      // struct list_elem *e;
-      // printf("==WAITERS ON SEMA\n");
-      // for (e = list_begin (&sema->waiters); e != list_end (&sema->waiters); e = list_next (e))
-      // {
-      // struct thread *t = list_entry (e, struct thread, elem);
-      // printf("-%s with priority %i\n",t->name, t->effective_priority);
-      // }
-
       //Find the max element
       struct list_elem * max_elem = list_max(&sema->waiters, priority_thread_less, NULL);
       //Remove it from the list
@@ -138,8 +130,17 @@ sema_up (struct semaphore *sema)
       //printf("max thread = %s\n", max_thread->name);
       list_remove (max_elem);
       thread_unblock (max_thread);
+
+      if(max_thread->priority > thread_current()->priority) {
+        yield_flag = true;
+      }
   }
   sema->value++;
+
+  if(!intr_context() && yield_flag) {
+    thread_yield();
+  }
+
   intr_set_level (old_level);
 }
 
