@@ -380,13 +380,15 @@ thread_set_priority (int new_priority)
   // printf("setting priority of %s with priority %i to %i \n", thread_name(),thread_current()->priority,new_priority);
   sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
-
-
-  // if(new_priority > thread_current ()->effective_priority) {
-  //   thread_current ()->effective_priority = new_priority;
-  // }
-
+  //Find the max element
   sema_up(&thread_current ()->priority_sema);
+  struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
+  //Remove it from the list
+  struct thread * max_thread = list_entry (max_elem, struct thread, elem);
+  if(max_thread->priority >= new_priority) {
+    thread_yield();
+  }
+
 }
 
 /* Returns the current thread's priority. */
