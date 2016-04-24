@@ -177,7 +177,6 @@ sema_test_helper (void *sema_)
       sema_up (&sema[1]);
     }
 }
-
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
    is, it is an error for the thread currently holding a lock to
@@ -223,7 +222,7 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
     sema_up(&donee->priority_sema);
     //if donee is waiting on a lock, recursively donate donees new priority
     if(donee->waiting_lock != NULL && rec_level > 0) { 
-      donate_priority_rec(--rec_level, donee->waiting_lock, donee);
+      donate_priority_rec(rec_level--, donee->waiting_lock, donee);
     }
   }
   else {
@@ -250,17 +249,16 @@ lock_acquire (struct lock *lock)
 
   // try and down semaphore
   // if success we can get the lock
-  bool success = sema_try_down (&lock->semaphore);
+  bool success;
+  success = sema_try_down (&lock->semaphore);
   if (success) {
     lock->holder = thread_current ();
   }
   //else donate priority to lock->holder recursive
   else {
-    donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current());
+    // donate_priority_rec(DONATION_REC_LEVEL, lock, thread_current());
     sema_down(&lock->semaphore);//call normal sema-down to block current thread
   }
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -295,7 +293,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   lock->holder = NULL;
   sema_up (&lock->semaphore);
-  revoke_priority_donation(&lock);
+  // revoke_priority_donation(&lock);
 }
 
 void
