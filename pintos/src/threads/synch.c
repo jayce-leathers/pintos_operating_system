@@ -248,8 +248,8 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  try and down semaphore
-  if success we can get the lock
+  // try and down semaphore
+  // if success we can get the lock
   bool success = sema_try_down (&lock->semaphore);
   if (success) {
     lock->holder = thread_current ();
@@ -341,7 +341,7 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem
   {
