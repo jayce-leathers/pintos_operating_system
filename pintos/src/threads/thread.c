@@ -201,7 +201,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-  if(thread_current()->priority < priority) {
+  if(thread_current()->effective_priority < priority) {
     thread_yield();
   }
 
@@ -380,12 +380,20 @@ thread_set_priority (int new_priority)
   // printf("setting priority of %s with priority %i to %i \n", thread_name(),thread_current()->priority,new_priority);
   sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
+
+  
+  if(list_empty(&thread_current()->donation_list)) {
+    thread_current()->effective_priority = new_priority;
+  }
+  else if(thread_current()->effective_priority < new_priority) {
+    thread_current()->effective_priority = new_priority;
+  }
   //Find the max element
   sema_up(&thread_current ()->priority_sema);
   struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
   //Remove it from the list
   struct thread * max_thread = list_entry (max_elem, struct thread, elem);
-  if(max_thread->priority >= new_priority) {
+  if(max_thread->effective_priority >= new_priority) {
     thread_yield();
   }
 
@@ -548,7 +556,7 @@ priority_thread_less (const struct list_elem *a, const struct list_elem *b,
   const struct thread *thread_a = list_entry (a, struct thread, elem);
   const struct thread *thread_b = list_entry (b, struct thread, elem);
   
-  return thread_a->priority < thread_b->priority;
+  return thread_a->effective_priority < thread_b->effective_priority;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
