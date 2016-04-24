@@ -292,9 +292,9 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  revoke_priority_donation(lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
-  revoke_priority_donation(lock);
 }
 
 static bool
@@ -312,44 +312,45 @@ void
 revoke_priority_donation(struct lock * releasing_lock) {
   //iterate through list of current thread's donators
   sema_down(&releasing_lock->holder->priority_sema);
-  int donor_mem = &releasing_lock->holder->donation_list;
-  printf("donor memory address = %i", donor_mem);
+  // printf("priority_sema downed \n");
+  // int donor_mem = &releasing_lock->holder->donation_list;
+  struct list * donor_list = &releasing_lock->holder->donation_list;
+  // printf("donor memory address = %i\n", donor_mem);
   struct list_elem  *e;
-  printf("priority_sema downed \n");
-  for (e = list_begin (&releasing_lock->holder->donation_list);e != list_end (&releasing_lock->holder->donation_list);e = list_next (e))
+  for (e = list_begin (donor_list);e != list_end (donor_list);e = list_next (e))
     {
     // printf("iterating thru donor list \n");
-    printf("donor list size =  %i\n", list_size(&releasing_lock->holder->donation_list) );
+    // printf("donor list size =  %i\n", list_size(&releasing_lock->holder->donation_list) );
   //find the threads which donated priority for the current lock
       struct thread * t = list_entry(e, struct thread, donor_elem);
-      if(t->waiting_lock == releasing_lock){
+      if(&t->waiting_lock == releasing_lock){
         //remove them from the list
         list_remove(e);
       }
     }
-  printf("iterarated thru donor list \n");
+  // printf("iterarated thru donor list \n");
   //if the list is not now empty find the list's max priority thread
-    if(!list_empty(&releasing_lock->holder->donation_list)) {
-      printf("donor list not empty \n");
+    if(!list_empty(donor_list)) {
+      // printf("donor list not empty \n");
       //and set the current thread's effective priority to that thread's priority
-      struct list_elem * max_elem = list_max(&releasing_lock->holder->donation_list, priority_donate_less, NULL);
+      struct list_elem * max_elem = list_max(donor_list, priority_donate_less, NULL);
       //Remove it from the list
       struct thread * max_thread = list_entry (max_elem, struct thread, donor_elem);
 
       sema_down(&max_thread->priority_sema);
-      printf("donor list not empty max threads donor sem down \n");
+      // printf("donor list not empty max threads donor sem down \n");
       releasing_lock->holder->effective_priority = max_thread->effective_priority;
       sema_up(&max_thread->priority_sema);
-      printf("donor list not empty max threads donor sem up \n");
+      // printf("donor list not empty max threads donor sem up \n");
 
     }
     else {
-      printf("donor list empty \n");
+      // printf("donor list empty \n");
       //set the current thread's priority to its base priority
       releasing_lock->holder->effective_priority = releasing_lock->holder->priority;
     } 
     sema_up(&releasing_lock->holder->priority_sema); 
-    printf("end \n");
+//     printf("end \n");
 }
 
 /* Returns true if the current thread holds LOCK, false
