@@ -113,7 +113,7 @@ void
 sema_up (struct semaphore *sema)
 {
   enum intr_level old_level;
-  bool yield_flag;
+  bool yield_flag = false;
 
   ASSERT (sema != NULL);
 
