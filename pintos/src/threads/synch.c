@@ -212,23 +212,56 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
   // if(donor->waiting_lock == NULL) {
     // donor->waiting_lock = desired_lock;
   // }
-  struct thread * donee = desired_lock->holder;//the thread we're donating to
-  sema_down(&donee->priority_sema);
-  sema_down(&donor->priority_sema);
-  if(donee->effective_priority < donor->effective_priority) { //check if the new priority is higher
-    donee->effective_priority = donor->effective_priority; //set priority
-    list_push_back(&donee->donation_list, &donor->donor_elem); //add donor to donee's list of donators
-    sema_up(&donor->priority_sema);
-    sema_up(&donee->priority_sema);
-    //if donee is waiting on a lock, recursively donate donees new priority
-    if(donee->waiting_lock != NULL && rec_level > 0) { 
-      donate_priority_rec(rec_level--, donee->waiting_lock, donee);
+  //printf("recurse!!\n");
+  if(rec_level <= 0) {
+    return;
+  } else {
+    struct thread * donee = desired_lock->holder;//the thread we're donating to
+
+    sema_down(&donee->priority_sema);
+    sema_down(&donor->priority_sema);
+
+    if(donee->effective_priority < donor->effective_priority) { //check if the new priority is higher
+      donee->effective_priority = donor->effective_priority; //set priority
+      list_push_back(&donee->donation_list, &donor->donor_elem); //add donor to donee's list of donators
     }
-  }
-  else {
+
     sema_up(&donor->priority_sema);
     sema_up(&donee->priority_sema);
+
+    
+
+      //if donee is waiting on a lock, recursively donate donees new priority
+    if(donee->waiting_lock != NULL) { 
+    //       if(donee->waiting_lock->holder != NULL) {
+    //   printf("donee->waiting_lock's holder: %s\n", donee->waiting_lock->holder->waiting_lock);
+    // }
+      rec_level--;
+      printf("rec: %i, new donor name: %s\n", rec_level, donee->name);
+      donate_priority_rec(rec_level, donee->waiting_lock, donor);
+    }
+
   }
+  // struct thread * donee = desired_lock->holder;//the thread we're donating to
+  // sema_down(&donee->priority_sema);
+  // sema_down(&donor->priority_sema);
+  // if(donee->effective_priority < donor->effective_priority) { //check if the new priority is higher
+  //   donee->effective_priority = donor->effective_priority; //set priority
+  //   list_push_back(&donee->donation_list, &donor->donor_elem); //add donor to donee's list of donators
+  //   sema_up(&donor->priority_sema);
+  //   sema_up(&donee->priority_sema);
+  //   //if donee is waiting on a lock, recursively donate donees new priority
+  //   if(donee->waiting_lock != NULL && rec_level > 0) { 
+  //     rec_level--;
+  //     printf("rec: %i, new donor name: %s\n", rec_level, donee->name);
+  //     donate_priority_rec(rec_level, donee->waiting_lock, donee);
+  //   }
+  // }
+  // else {
+  //   sema_up(&donor->priority_sema);
+  //   sema_up(&donee->priority_sema);
+  // }
+  // return;
   // printf("%s donated priority to %s \n", donor->name,donee->name);
 
 }
