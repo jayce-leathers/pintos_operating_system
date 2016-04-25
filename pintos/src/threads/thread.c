@@ -224,18 +224,6 @@ thread_block (void)
   schedule ();
 }
 
-void print_ready(void) {
-    struct list_elem *e;
-
-  //print out ready list
-  for (e = list_begin (&ready_list); e != list_end (&ready_list);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, elem);
-      printf("-%s with priority %i\n",t->name, t->effective_priority);
-    }
-}
-
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -247,7 +235,6 @@ void print_ready(void) {
 void
 thread_unblock (struct thread *t)
 {
-  // printf("unblocking %s \n", thread_name);
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
@@ -255,19 +242,6 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
-  
-
-  // printf("current thread is %s with priority %i\n", thread_current()->name, thread_current()->effective_priority);
-  // printf("unblocking %s with priority %i\n",t->name, t->effective_priority);
-
-  // printf("==READY_LIST (from thread_unblock):\n");
-  // print_ready();
-
-  //if(t->effective_priority > thread_get_priority()) {
-  //  printf("current thread should yield\n");
-    //current thread needs to yield
-  //  thread_yield();
-  //}
 
   t->status = THREAD_READY;
   
@@ -334,25 +308,18 @@ void
 thread_yield (void)
 {
   struct thread *cur = thread_current ();
-  //printf("%s is attempting to yield\n", thread_current()->name);
+
   enum intr_level old_level;
-
   ASSERT (!intr_context ());
-
   old_level = intr_disable ();
 
   if (cur != idle_thread) {
     list_push_back (&ready_list, &cur->elem);
   }
 
-  //printf("==READY_LIST (from thread_yield):\n");
-  //print_ready();
-
   cur->status = THREAD_READY;
   schedule ();
 
-  //printf("==READY_LIST (from thread_yield, after schedule()):\n");
-  //print_ready();
   intr_set_level (old_level);
 }
 
@@ -377,22 +344,24 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  // printf("setting priority of %s with priority %i to %i \n", thread_name(),thread_current()->priority,new_priority);
   sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
 
-  
-  if(list_empty(&thread_current()->donation_list)) {
+  bool has_no_donors = list_empty(&thread_current()->donation_list);
+  bool effective_priority_less_than_base = thread_current()->effective_priority < new_priority;
+
+  //If either is true, reset effective_priority to the base priority
+  if(has_no_donors || effective_priority_less_than_base) {
     thread_current()->effective_priority = new_priority;
   }
-  else if(thread_current()->effective_priority < new_priority) {
-    thread_current()->effective_priority = new_priority;
-  }
-  //Find the max element
+
+  //Find the highest priority thread on the ready_list
   sema_up(&thread_current ()->priority_sema);
   struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
-  //Remove it from the list
   struct thread * max_thread = list_entry (max_elem, struct thread, elem);
+
+  //If a thread on the ready list has a higher priority than the current thread,
+  //the current thread should yield
   if(max_thread->effective_priority >= new_priority) {
     thread_yield();
   }
@@ -547,8 +516,8 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
-//Returns true if a < b, false otherwise.
-//Sourced from the tests from list.c
+/*Comparison function for threads. Compares effective priority
+and returns true if elem A < elem B. Sourced from list.c */
 bool
 priority_thread_less (const struct list_elem *a, const struct list_elem *b,
             void *aux UNUSED) 
@@ -573,20 +542,11 @@ next_thread_to_run (void)
   }
   else
   {
-    // printf("ready list not empty\n");
-
-    //Find the max element
+    //Find the highest priority thread, pop it off the ready_list, and return it
     struct list_elem * max_elem = list_max(&ready_list, priority_thread_less, NULL);
-    //Remove it from the list
     struct thread * max_thread = list_entry (max_elem, struct thread, elem);
-
-    //printf("max_thread=%s with priority %i\n", max_thread->name, max_thread->effective_priority);
-
     list_remove (max_elem);
-    //Return the max element (TODO: check list_entry wrapping)
     return max_thread;
-
-    //return list_entry (list_pop_front (&ready_list), struct thread, elem);
   }
 }
 
@@ -659,8 +619,6 @@ schedule (void)
   }
 
   thread_schedule_tail (prev);
-
-  //printf("scheduled, current=%s\tnext=%s\n", &cur->name, &next->name);
 }
 
 /* Returns a tid to use for a new thread. */
@@ -676,7 +634,7 @@ allocate_tid (void)
 
   return tid;
 }
-
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
