@@ -114,6 +114,8 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
+  //Find the max priority waiting thread to unblock
   if (!list_empty (&sema->waiters))
     {
       //Find the max element
@@ -129,6 +131,7 @@ sema_up (struct semaphore *sema)
         yield_flag = true;
       }
   }
+
   sema->value++;
 
   if(!intr_context() && yield_flag) {
@@ -200,7 +203,6 @@ lock_init (struct lock *lock)
 
 /*
 Recursively donates priority to lock holders
-
 */
 
 void 
@@ -210,16 +212,15 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
     return;
   //Recursive case:
   } else {
-
     //Get the thread that will receive the donation
     struct thread * donee = desired_lock->holder;
 
     struct list * donation_list = &donee->donation_list;
     struct list_elem * e;
 
+    //If the list_elem is already in the list, remove it before re-adding it
     for(e = list_begin(donation_list); e != list_end(donation_list); e = list_next(e)) {
       struct thread * t = list_entry(e, struct thread, donor_elem);
-      //printf("e: %p, donor_elem: %p, t->name: %s\n", e, &donee->donor_elem, &t->name);
       if(e == &t->donor_elem) {
         list_remove(e);
       }
@@ -316,6 +317,7 @@ lock_release (struct lock *lock)
   sema_up (&lock->semaphore);
 }
 
+/* Comparison function for priority donation. Compares effective_priority */
 static bool
 priority_donate_less (const struct list_elem *a, const struct list_elem *b,
             void *aux UNUSED)
@@ -327,16 +329,19 @@ priority_donate_less (const struct list_elem *a, const struct list_elem *b,
   return thread_a->effective_priority < thread_b->effective_priority;
 }
 
+/* Revokes priority donations, called from lock_release. Iterates through 
+   a thread's donation list, revoking donations from donors who were waiting on a
+   now-released lock */
 void
 revoke_priority_donation(struct lock * releasing_lock) {
-  //Iterate through the thread's donation_list, revoking
-  //donors who were waiting on the now-released lock
+  //Iterate through the thread's donation_list
   struct list * donor_list = &releasing_lock->holder->donation_list;
   struct list_elem  *e;
   for (e = list_begin (donor_list);e != list_end (donor_list);e = list_next (e))
     {
       struct thread * t = list_entry(e, struct thread, donor_elem);
 
+      //Removes donation
       if(t->waiting_lock == releasing_lock){
         list_remove(e);
       }
@@ -348,6 +353,7 @@ revoke_priority_donation(struct lock * releasing_lock) {
     //Find max donor
     struct list_elem * max_elem = list_max(donor_list, priority_donate_less, NULL);
     struct thread * max_thread = list_entry (max_elem, struct thread, donor_elem);
+    //Update priority
     sema_down(&max_thread->priority_sema);
     releasing_lock->holder->effective_priority = max_thread->effective_priority;
     sema_up(&max_thread->priority_sema);
@@ -426,7 +432,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   lock_acquire (lock);
 }
 
-/* Comparison function for condition variables */
+/* Comparison function for condition variables' priority scheduling  */
 static bool
 priority_cond_less (const struct list_elem *a, const struct list_elem *b,
             void *aux UNUSED)
@@ -456,13 +462,15 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) {
+    //If there are multiple waiters, wake the highest priority one
     if(list_size(&cond->waiters) > 1) {
+      //Find and pop the max
       struct list_elem * max_elem = list_max(&cond->waiters, priority_cond_less, NULL);
-      //Remove it from the list
       struct semaphore * max_semaphore = &list_entry (max_elem, struct semaphore_elem, elem)->semaphore;
-      //printf("max thread = %s\n", max_thread->name);
       list_remove (max_elem);
+
       sema_up(max_semaphore);
+    //Otherwise there's just one waiter, pop it off
     } else {
       sema_up (&list_entry (list_pop_front (&cond->waiters), struct semaphore_elem, elem)->semaphore);
     }

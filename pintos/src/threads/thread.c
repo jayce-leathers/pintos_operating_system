@@ -71,7 +71,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -347,11 +346,13 @@ thread_set_priority (int new_priority)
   sema_down(&thread_current ()->priority_sema);
   thread_current ()->priority = new_priority;
 
+  //If the thread has no donors, or its effective priority is less than the new
+  //then the effective priority needs to be updated
   bool has_no_donors = list_empty(&thread_current()->donation_list);
-  bool effective_priority_less_than_base = thread_current()->effective_priority < new_priority;
+  bool effective_priority_less_than_new = thread_current()->effective_priority < new_priority;
 
-  //If either is true, reset effective_priority to the base priority
-  if(has_no_donors || effective_priority_less_than_base) {
+  //Check both conditions, update if necessary
+  if(has_no_donors || effective_priority_less_than_new) {
     thread_current()->effective_priority = new_priority;
   }
 
@@ -454,7 +455,7 @@ kernel_thread (thread_func *function, void *aux)
   function (aux);       /* Execute the thread function. */
   thread_exit ();       /* If function() returns, kill the thread. */
 }
-
+
 /* Returns the running thread. */
 struct thread *
 running_thread (void)

@@ -124,9 +124,7 @@ timer_sleep (int64_t ticks)
   intr_set_level (INTR_ON);
   ASSERT (intr_get_level () == INTR_ON);
 
-  //use semaphore
-  //Block until woken up
-
+  //Go to sleep
   sema_down(&thread_current()->sema);
 
 }
@@ -201,26 +199,19 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
+/* Called once per timer tick. Checks whether any threads need 
+   to be awoken */
 void
 wake_sleeping_threads(void) {
-  //Assert interrupts off
   ASSERT(intr_get_level() == INTR_OFF);
-
-  //iterate through sleep list
-  //int count = 0;
 
   struct list_elem  *e;
   for (e = list_begin (&sleep_list);e != list_end (&sleep_list);e = list_next (e))
     {
-      //count++;
-      //printf("%i\n", count);
       struct thread *t = list_entry (e, struct thread, sleep_elem);
-      //check if current system tick is greater than each thread's waiting tick
-      //printf("waking: %i\n", t->waking_tick);
-      //printf("system: %i\n", timer_ticks());
+      //Check whether its time to wake up
       if(t->waking_tick <= timer_ticks()) {
-        //printf("time to wake up");
-        //remove thread from sleep list
+        //Remove thread from sleep list and wake up
         t->waking_tick = 0;
         list_remove(&t->sleep_elem);
         sema_up(&t->sema);
