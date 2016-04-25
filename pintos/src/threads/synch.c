@@ -210,8 +210,20 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
     return;
   //Recursive case:
   } else {
+
     //Get the thread that will receive the donation
     struct thread * donee = desired_lock->holder;
+
+    struct list * donation_list = &donee->donation_list;
+    struct list_elem * e;
+
+    for(e = list_begin(donation_list); e != list_end(donation_list); e = list_next(e)) {
+      struct thread * t = list_entry(e, struct thread, donor_elem);
+      //printf("e: %p, donor_elem: %p, t->name: %s\n", e, &donee->donor_elem, &t->name);
+      if(e == &t->donor_elem) {
+        list_remove(e);
+      }
+    }
 
     //If donor's priority is higher, update donee's effective_priority
     sema_down(&donee->priority_sema);
@@ -228,7 +240,7 @@ donate_priority_rec(int rec_level, struct lock * desired_lock, struct thread * d
     //If the donee is waiting on a lock, recursively donate to that lock's holder
     if(donee->waiting_lock != NULL) { 
       rec_level--;
-      donate_priority_rec(rec_level, donee->waiting_lock, donor);
+      donate_priority_rec(rec_level, donee->waiting_lock, donee);
     }
 
   }
