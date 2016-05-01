@@ -195,7 +195,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, const char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -206,7 +206,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (const char *cmdline, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -220,6 +220,15 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+
+  char cmdline_copy [128];
+
+  memcpy((void*)cmdline_copy, cmdline, strlen(cmdline));
+
+  char *file_name, *save_ptr;
+
+  file_name = strtok_r (cmdline_copy, " ", &save_ptr);
+
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -302,7 +311,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, cmdline))
     goto done;
 
   /* Start address. */
@@ -315,7 +324,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   file_close (file);
   return success;
 }
-
+
 /* load() helpers. */
 
 static bool install_page (void *upage, void *kpage, bool writable);
@@ -427,7 +436,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, const char *file_name) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -436,10 +445,67 @@ setup_stack (void **esp)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
+      if (success) {
+        int argc = 0;
         *esp = PHYS_BASE - 12;
-      else
+        //char * name_and_args = (char *)file_name;
+        char name_and_args[strlen(file_name)];
+        memcpy((void *)name_and_args, file_name, strlen(file_name));
+        char *token, *save_ptr;
+
+        //Parse tokens, and add to top of stack in L->R order
+        for (token = strtok_r(name_and_args, " ", &save_ptr);
+          token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
+          //**esp = (void *)token;
+          memcpy(*esp, token, strlen(token));
+          *esp -= strlen(token) * sizeof(*token);
+          argc++;
+        }
+
+        //Add word align offset if necessary
+        int offset = (int)*esp % 4;
+
+        if(offset != 0) {
+          uint8_t word_align[4 - offset];
+          memcpy(*esp, word_align, sizeof(word_align));
+          //**esp = word_align;
+          *esp -= sizeof(word_align);
+        }
+
+        int null = 0;
+
+        //Add null sentinel
+        memcpy(*esp, &null, 4);
+        //**esp = NULL;
+        *esp -= 4;
+
+        int i;
+        //Add pointers to arguments
+        for(i=0; i<argc; i++) {
+          memcpy(*esp, &token, sizeof(*token));
+          //**esp = &token;
+          *esp -= sizeof(*token);
+          token += sizeof(*token);     
+        }
+
+        //Push argv
+        memcpy(*esp, esp, 4);
+        //**esp = *esp;
+        *esp -= 4;
+
+        //Push argc
+        memcpy(*esp, &argc, sizeof(argc));
+        //**esp = argc;
+        *esp -= sizeof(argc);
+
+        //Push null return code
+        memcpy(*esp, &null, 4);
+        //**esp = NULL;
+        *esp -= 4;
+      }
+      else {
         palloc_free_page (kpage);
+      }
     }
   return success;
 }
