@@ -435,6 +435,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
+//TODO: remove first token (file_name), last token is NULL not last token
+//draw stack, figure out what it should be
 static bool
 setup_stack (void **esp, const char *file_name) 
 {
@@ -448,15 +450,15 @@ setup_stack (void **esp, const char *file_name)
       if (success) {
         int argc = 0;
         *esp = PHYS_BASE - 12;
-        //char * name_and_args = (char *)file_name;
+
+        //Mutable copy of the file name and args
         char name_and_args[strlen(file_name)];
         memcpy((void *)name_and_args, file_name, strlen(file_name));
-        char *token, *save_ptr;
 
+        char *token, *save_ptr;
         //Parse tokens, and add to top of stack in L->R order
         for (token = strtok_r(name_and_args, " ", &save_ptr);
           token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
-          //**esp = (void *)token;
           memcpy(*esp, token, strlen(token));
           *esp -= strlen(token) * sizeof(*token);
           argc++;
@@ -468,7 +470,6 @@ setup_stack (void **esp, const char *file_name)
         if(offset != 0) {
           uint8_t word_align[4 - offset];
           memcpy(*esp, word_align, sizeof(word_align));
-          //**esp = word_align;
           *esp -= sizeof(word_align);
         }
 
@@ -476,31 +477,26 @@ setup_stack (void **esp, const char *file_name)
 
         //Add null sentinel
         memcpy(*esp, &null, 4);
-        //**esp = NULL;
         *esp -= 4;
 
         int i;
         //Add pointers to arguments
         for(i=0; i<argc; i++) {
           memcpy(*esp, &token, sizeof(*token));
-          //**esp = &token;
           *esp -= sizeof(*token);
           token += sizeof(*token);     
         }
 
         //Push argv
         memcpy(*esp, esp, 4);
-        //**esp = *esp;
         *esp -= 4;
 
         //Push argc
         memcpy(*esp, &argc, sizeof(argc));
-        //**esp = argc;
         *esp -= sizeof(argc);
 
         //Push null return code
         memcpy(*esp, &null, 4);
-        //**esp = NULL;
         *esp -= 4;
       }
       else {
