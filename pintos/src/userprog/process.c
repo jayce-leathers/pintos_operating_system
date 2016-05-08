@@ -454,10 +454,11 @@ setup_stack (void **esp, const char *file_name)
       char name_and_args[strlen(file_name)];
       strlcpy(name_and_args, file_name, strlen(file_name)+1);
 
-      char *token, *save_ptr;
+      char *token, *save_ptr, *last_token;
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
+        last_token = (char*)kpage+PAGE_SIZE-offset;
         offset += strlen(token) * sizeof(*token) + 1;
         strlcpy((char*)kpage+PAGE_SIZE-offset, token, strlen(token)+1);
         argc++;
@@ -472,31 +473,33 @@ setup_stack (void **esp, const char *file_name)
       //   *esp -= sizeof(word_align);
       // }
 
-      int null = 0;
+      char null = '0';
 
       //Add null sentinel
-      memcpy(kpage+PAGE_SIZE-offset, &null, 4);
-      offset += 4;
+      offset += sizeof(token);
+      memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(token));
+      
 
       int i;
       //Add pointers to arguments
       for(i=0; i<argc; i++) {
-        memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(*token));
-        offset += sizeof(*token);
-        token += sizeof(*token);     
+        offset += sizeof(last_token);
+        memcpy(kpage+PAGE_SIZE-offset, &last_token, sizeof(last_token));
+        last_token += strlen(last_token)+1;     
       }
-
+      
       //Push argv
-      memcpy(kpage+PAGE_SIZE-offset, &offset, 4);
-      offset += 4;
+      uint8_t last_offset = offset;
+      offset += sizeof(last_offset);
+      memcpy(kpage+PAGE_SIZE-offset, &last_offset, sizeof(last_offset));
 
       //Push argc
-      memcpy(kpage+PAGE_SIZE-offset, &argc, sizeof(argc));
       offset += sizeof(argc);
+      memcpy(kpage+PAGE_SIZE-offset, &argc, sizeof(argc));
 
       //Push null return code
-      memcpy(kpage+PAGE_SIZE-offset, &null, 4);
-      offset += 4;
+      offset += sizeof(token);
+      memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(token));
 
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
