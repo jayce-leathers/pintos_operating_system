@@ -20,7 +20,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-const int PAGE_SIZE = 4000;
+const int PAGE_SIZE = 4096;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -452,14 +452,14 @@ setup_stack (void **esp, const char *file_name)
       int argc = 0;  
       //Mutable copy of the file name and args
       char name_and_args[strlen(file_name)];
-      strlcpy(name_and_args, file_name, strlen(file_name));
+      strlcpy(name_and_args, file_name, strlen(file_name)+1);
 
       char *token, *save_ptr;
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
-        memcpy(kpage+PAGE_SIZE-offset, token, strlen(token));
-        offset -= strlen(token) * sizeof(*token) + 1;
+        offset += strlen(token) * sizeof(*token) + 1;
+        strlcpy((char*)kpage+PAGE_SIZE-offset, token, strlen(token)+1);
         argc++;
       }
 
@@ -476,27 +476,27 @@ setup_stack (void **esp, const char *file_name)
 
       //Add null sentinel
       memcpy(kpage+PAGE_SIZE-offset, &null, 4);
-      offset -= 4;
+      offset += 4;
 
       int i;
       //Add pointers to arguments
       for(i=0; i<argc; i++) {
         memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(*token));
-        offset -= sizeof(*token);
+        offset += sizeof(*token);
         token += sizeof(*token);     
       }
 
       //Push argv
       memcpy(kpage+PAGE_SIZE-offset, &offset, 4);
-      offset -= 4;
+      offset += 4;
 
       //Push argc
       memcpy(kpage+PAGE_SIZE-offset, &argc, sizeof(argc));
-      offset -= sizeof(argc);
+      offset += sizeof(argc);
 
       //Push null return code
       memcpy(kpage+PAGE_SIZE-offset, &null, 4);
-      offset -= 4;
+      offset += 4;
 
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
