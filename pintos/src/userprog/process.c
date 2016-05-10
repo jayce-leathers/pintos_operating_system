@@ -20,7 +20,6 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-const int PAGE_SIZE = 4096;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -458,9 +457,10 @@ setup_stack (void **esp, const char *file_name)
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
-        last_token = (char*)kpage+PAGE_SIZE-offset;
         offset += strlen(token) * sizeof(*token) + 1;
-        strlcpy((char*)kpage+PAGE_SIZE-offset, token, strlen(token)+1);
+        last_token = (char*)kpage+PGSIZE-offset;
+        strlcpy((char*)kpage+PGSIZE-offset, token, strlen(token)+1);
+        printf("%p\n", kpage+PGSIZE-offset);
         argc++;
       }
 
@@ -473,43 +473,44 @@ setup_stack (void **esp, const char *file_name)
       //   *esp -= sizeof(word_align);
       // }
 
-      char null = '0';
-
       //Add null sentinel
       offset += sizeof(token);
-      memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(token));
+      memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
       
 
       int i;
       //Add pointers to arguments
       for(i=0; i<argc; i++) {
         offset += sizeof(last_token);
-        memcpy(kpage+PAGE_SIZE-offset, &last_token, sizeof(last_token));
+        memcpy(kpage+PGSIZE-offset, &last_token, sizeof(last_token));
         last_token += strlen(last_token)+1;     
       }
       
       //Push argv
-      uint8_t last_offset = offset;
+      int last_offset = kpage+PGSIZE-offset;
       offset += sizeof(last_offset);
-      memcpy(kpage+PAGE_SIZE-offset, &last_offset, sizeof(last_offset));
+      memcpy(kpage+PGSIZE-offset, &last_offset, sizeof(&last_offset));
 
       //Push argc
       offset += sizeof(argc);
-      memcpy(kpage+PAGE_SIZE-offset, &argc, sizeof(argc));
+      memcpy(kpage+PGSIZE-offset, &argc, sizeof(argc));
 
       //Push null return code
       offset += sizeof(token);
-      memcpy(kpage+PAGE_SIZE-offset, &token, sizeof(token));
-
+      //memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
+      
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+     
       if (success) {
         *esp = PHYS_BASE - 12;
-        hex_dump(0, kpage, PAGE_SIZE, true);
+        hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
       }
       else {
         palloc_free_page (kpage);
       }
     }
+
+
   return success;
 }
 
