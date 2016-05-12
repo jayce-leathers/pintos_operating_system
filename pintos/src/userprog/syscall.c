@@ -3,11 +3,13 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "devices/shutdown.h"
 
 static void syscall_handler (struct intr_frame *);
 
-static int sys_write(int fd, const void *buffer, unsigned size);
+static int write(int fd, const void *buffer, unsigned size);
 static void exit(int status);
+static void halt(void);
 const int MAX_ARGS = 128;
 
 void
@@ -37,19 +39,22 @@ syscall_handler (struct intr_frame *f)
   switch(*sys_call) {
   	case SYS_WRITE:
       get_syscall_args(args, f->esp, 3);
-  		f->eax = sys_write(args[0], (const void*)args[1], (unsigned)args[2]);
+  		f->eax = write(args[0], (const void*)args[1], (unsigned)args[2]);
   		break;
   	case SYS_EXIT:
   		status = (int*)f->esp+1;
   		exit(*status);
   		break;
+    case SYS_HALT:
+      halt();
+      break;
   	default:
   		printf("unhandled syscall number %d\n", *sys_call);
   		thread_exit ();
   }
 }
 
-static int sys_write(int fd, const void *buffer, unsigned size) {
+static int write(int fd, const void *buffer, unsigned size) {
 	//printf("fd: %i, buffer: %p, size: %i\n", fd, buffer, size);
   if(fd == 1) {
     putbuf((char*)buffer, size);
@@ -60,9 +65,14 @@ static int sys_write(int fd, const void *buffer, unsigned size) {
 }
 
 static void exit(int status) {
-	printf("system call: sys_exit() with status %d\n", status);
+	//printf("system call: sys_exit() with status %d\n", status);
+  printf ("%s: exit(%d)\n", thread_current()->name, status);
 	thread_exit();
 	NOT_REACHED();
 	//want to return exit status, so thread can wait on it and get exit status
 	//save it in a field in struct thread
+}
+
+static void halt() {
+  shutdown_power_off();
 }

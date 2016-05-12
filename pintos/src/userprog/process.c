@@ -38,6 +38,10 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  //Tokenizes the file_name and gets the first argument
+  char *save_ptr;
+  file_name = strtok_r (fn_copy, " ", &save_ptr);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -228,7 +232,6 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   char *file_name, *save_ptr;
 
   file_name = strtok_r (cmdline_copy, " ", &save_ptr);
-
 
   /* Open executable file. */
   file = filesys_open (file_name);
