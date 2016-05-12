@@ -8,6 +8,7 @@ static void syscall_handler (struct intr_frame *);
 
 static int sys_write(int fd, const void *buffer, unsigned size);
 static void exit(int status);
+const int MAX_ARGS = 128;
 
 void
 syscall_init (void) 
@@ -16,15 +17,27 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+get_syscall_args (int* args, void* esp, int argc) {
+  int i;
+  int *addr;
+  for(i=0; i<argc; i++) {
+    addr = (int*) esp + i + 1;
+    args[i] = *addr;
+  }
+}
+
+static void
+syscall_handler (struct intr_frame *f) 
 {
   int *sys_call; //syscall number
   int* status;
   sys_call = (int*)f->esp;
+  int args[MAX_ARGS];
 
   switch(*sys_call) {
   	case SYS_WRITE:
-  		f->eax = sys_write(1, NULL, 0);
+      get_syscall_args(args, f->esp, 3);
+  		f->eax = sys_write(args[0], (const void*)args[1], (unsigned)args[2]);
   		break;
   	case SYS_EXIT:
   		status = (int*)f->esp+1;
@@ -36,8 +49,13 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
 }
 
-static int sys_write(int fd UNUSED, const void *buffer UNUSED, unsigned size UNUSED) {
-	printf("system call: sys_write()\n");
+static int sys_write(int fd, const void *buffer, unsigned size) {
+	//printf("fd: %i, buffer: %p, size: %i\n", fd, buffer, size);
+  if(fd == 1) {
+    putbuf((char*)buffer, size);
+  } else {
+    printf("system call: sys_write() (not fd 1)\n");
+  }
 	return 0;
 }
 

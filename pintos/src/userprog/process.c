@@ -131,7 +131,7 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
@@ -221,9 +221,9 @@ load (const char *cmdline, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  char cmdline_copy [128];
+  char cmdline_copy [14];
 
-  memcpy((void*)cmdline_copy, cmdline, strlen(cmdline));
+  memcpy((void*)cmdline_copy, cmdline, 14);
 
   char *file_name, *save_ptr;
 
@@ -435,8 +435,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
-//TODO: remove first token (file_name), last token is NULL not last token
-//draw stack, figure out what it should be
 static bool
 setup_stack (void **esp, const char *file_name) 
 {
@@ -444,9 +442,22 @@ setup_stack (void **esp, const char *file_name)
   bool success = false;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  
+  printf("kpage: %p\n", kpage);
+  printf("PHYS_BASE: %p\n", PHYS_BASE);
+
+
   if (kpage != NULL) 
     {
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+     
+      if (success) {
+        *esp = PHYS_BASE - 12;
+        //hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
+      }
+      else {
+        palloc_free_page (kpage);
+      }
+
       uint8_t offset = 0;
       int argc = 0;  
       //Mutable copy of the file name and args
@@ -498,16 +509,7 @@ setup_stack (void **esp, const char *file_name)
       //Push null return code
       offset += sizeof(token);
       //memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
-      
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-     
-      if (success) {
-        *esp = PHYS_BASE - 12;
-        hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
-      }
-      else {
-        palloc_free_page (kpage);
-      }
+      hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
     }
 
 
