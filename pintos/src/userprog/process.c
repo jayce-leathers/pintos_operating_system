@@ -452,55 +452,49 @@ setup_stack (void **esp, const char *file_name)
      
       if (success) {
         *esp = PHYS_BASE - 12;
-        //hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
       }
       else {
         palloc_free_page (kpage);
       }
 
       uint8_t offset = 0;
-      int argc = 0;  
+      int argc = 0;
+      char* argv[128];
+
       //Mutable copy of the file name and args
       char name_and_args[strlen(file_name)];
       strlcpy(name_and_args, file_name, strlen(file_name)+1);
 
-      char *token, *save_ptr, *last_token;
+      char *token, *save_ptr;
+
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
         offset += strlen(token) * sizeof(*token) + 1;
-        last_token = (char*)kpage+PGSIZE-offset;
+        argv[argc] = (char*)PHYS_BASE-offset;
         strlcpy((char*)kpage+PGSIZE-offset, token, strlen(token)+1);
-        printf("%p\n", kpage+PGSIZE-offset);
         argc++;
       }
 
-      //Add word align offset if necessary
-      // int offset = (int)*esp % 4;
-
-      // if(offset != 0) {
-      //   uint8_t word_align[4 - offset];
-      //   memcpy(*esp, word_align, sizeof(word_align));
-      //   *esp -= sizeof(word_align);
-      // }
+      //Preemptively align the remainder of the stack
+      if(offset % 4 > 0)
+        offset += (4 - offset % 4);
 
       //Add null sentinel
       offset += sizeof(token);
       memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
       
-
       int i;
       //Add pointers to arguments
-      for(i=0; i<argc; i++) {
-        offset += sizeof(last_token);
-        memcpy(kpage+PGSIZE-offset, &last_token, sizeof(last_token));
-        last_token += strlen(last_token)+1;     
+      for(i=argc-1; i>=0; i--) {
+        offset += sizeof(argv[i]);
+        memcpy(kpage+PGSIZE-offset, &argv[i], sizeof(argv[i]));   
       }
       
       //Push argv
-      int last_offset = kpage+PGSIZE-offset;
+      int last_offset = PHYS_BASE-offset;
       offset += sizeof(last_offset);
-      memcpy(kpage+PGSIZE-offset, &last_offset, sizeof(&last_offset));
+      memcpy(kpage+PGSIZE-offset, &last_offset, sizeof(last_offset));
 
       //Push argc
       offset += sizeof(argc);
@@ -511,7 +505,6 @@ setup_stack (void **esp, const char *file_name)
       //memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
       hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
     }
-
 
   return success;
 }
