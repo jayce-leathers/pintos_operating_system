@@ -442,21 +442,9 @@ setup_stack (void **esp, const char *file_name)
   bool success = false;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  printf("kpage: %p\n", kpage);
-  printf("PHYS_BASE: %p\n", PHYS_BASE);
-
 
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-     
-      if (success) {
-        *esp = PHYS_BASE - 12;
-      }
-      else {
-        palloc_free_page (kpage);
-      }
-
       uint8_t offset = 0;
       int argc = 0;
       char* argv[128];
@@ -500,10 +488,17 @@ setup_stack (void **esp, const char *file_name)
       offset += sizeof(argc);
       memcpy(kpage+PGSIZE-offset, &argc, sizeof(argc));
 
-      //Push null return code
+      //Set esp
       offset += sizeof(token);
-      //memcpy(kpage+PGSIZE-offset, &token, sizeof(token));
-      hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
+
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+     
+      if (success) {
+        *esp = PHYS_BASE - offset;
+      }
+      else {
+        palloc_free_page (kpage);
+      }
     }
 
   return success;
