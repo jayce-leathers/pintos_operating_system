@@ -39,8 +39,8 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   //Tokenizes the file_name and gets the first argument
-  //char *save_ptr;
-  //file_name = strtok_r (fn_copy, " ", &save_ptr);
+  char *save_ptr;
+  file_name = strtok_r (file_name, " ", &save_ptr);;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -218,6 +218,8 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+
+  printf("commandline: %s", cmdline);
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
