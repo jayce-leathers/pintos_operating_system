@@ -39,8 +39,8 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   //Tokenizes the file_name and gets the first argument
-  char *save_ptr;
-  file_name = strtok_r (fn_copy, " ", &save_ptr);
+  //char *save_ptr;
+  //file_name = strtok_r (fn_copy, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
@@ -455,12 +455,13 @@ setup_stack (void **esp, const char *file_name)
       //Mutable copy of the file name and args
       char name_and_args[strlen(file_name)];
       strlcpy(name_and_args, file_name, strlen(file_name)+1);
-
+      printf("n&a: %s\n", name_and_args);
       char *token, *save_ptr;
 
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
+        printf("%s\n", token);
         offset += strlen(token) * sizeof(*token) + 1;
         argv[argc] = (char*)PHYS_BASE-offset;
         strlcpy((char*)kpage+PGSIZE-offset, token, strlen(token)+1);
@@ -498,6 +499,7 @@ setup_stack (void **esp, const char *file_name)
      
       if (success) {
         *esp = PHYS_BASE - offset;
+        hex_dump((uintptr_t*)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
       }
       else {
         palloc_free_page (kpage);
