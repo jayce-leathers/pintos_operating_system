@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -11,6 +12,7 @@ static int write(int fd, const void *buffer, unsigned size);
 static void exit(int status);
 static void halt(void);
 const int MAX_ARGS = 128;
+const int USER_BASE = 0x08048000;
 
 void
 syscall_init (void) 
@@ -29,11 +31,20 @@ get_syscall_args (int* args, void* esp, int argc) {
 }
 
 static void
+check_pointer(int* ptr) {
+  if(!is_user_vaddr(ptr) || ptr < USER_BASE) {
+    exit(-1);
+  }
+}
+
+static void
 syscall_handler (struct intr_frame *f) 
 {
   int *sys_call; //syscall number
-  int* status;
   sys_call = (int*)f->esp;
+
+  check_pointer(sys_call);
+
   int args[MAX_ARGS];
 
   switch(*sys_call) {
@@ -42,22 +53,28 @@ syscall_handler (struct intr_frame *f)
   		f->eax = write(args[0], (const void*)args[1], (unsigned)args[2]);
   		break;
   	case SYS_EXIT:
-  		status = (int*)f->esp+1;
-  		exit(*status);
+      get_syscall_args(args, f->esp, 1);
+  		exit(args[0]);
   		break;
     case SYS_HALT:
       halt();
       break;
+    // case SYS_WAIT:
+    //   get_syscall_args(args, f->esp, 1);
+    //   f->eax = wait(args[0]);
+    //   break;
   	default:
   		printf("unhandled syscall number %d\n", *sys_call);
   		thread_exit ();
   }
 }
 
+
 static int write(int fd, const void *buffer, unsigned size) {
 	//printf("fd: %i, buffer: %p, size: %i\n", fd, buffer, size);
   if(fd == 1) {
     putbuf((char*)buffer, size);
+    return size;
   } else {
     printf("system call: sys_write() (not fd 1)\n");
   }

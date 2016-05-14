@@ -18,6 +18,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#include "devices/timer.h"
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -90,9 +92,11 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  while(1);
+  //while(1);
+  timer_sleep(50);
+  return 1;
 }
 
 /* Free the current process's resources. */
@@ -219,7 +223,7 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
-  printf("commandline: %s", cmdline);
+  //printf("commandline: %s", cmdline);
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -457,13 +461,13 @@ setup_stack (void **esp, const char *file_name)
       //Mutable copy of the file name and args
       char name_and_args[strlen(file_name)];
       strlcpy(name_and_args, file_name, strlen(file_name)+1);
-      printf("n&a: %s\n", name_and_args);
+      //printf("n&a: %s\n", name_and_args);
       char *token, *save_ptr;
 
       //Parse tokens, and add to top of stack in L->R order
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
-        printf("%s\n", token);
+        //printf("%s\n", token);
         offset += strlen(token) * sizeof(*token) + 1;
         argv[argc] = (char*)PHYS_BASE-offset;
         strlcpy((char*)kpage+PGSIZE-offset, token, strlen(token)+1);
@@ -501,7 +505,7 @@ setup_stack (void **esp, const char *file_name)
      
       if (success) {
         *esp = PHYS_BASE - offset;
-        hex_dump((uintptr_t*)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
+        //hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
       }
       else {
         palloc_free_page (kpage);
