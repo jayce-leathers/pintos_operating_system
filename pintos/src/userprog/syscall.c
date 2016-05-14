@@ -9,6 +9,7 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "userprog/pagedir.h"
+#include "userprog/process.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -22,7 +23,8 @@ static bool remove(const char * file);
 static void init_file_data(struct file_list_data * f, int fd, struct file * file_struct, const char * file_name);
 static int filesize(int fd);
 static int read(int fd, void *buffer, unsigned size);
-
+static pid_t exec(const char * cmd_line);
+static int wait(pid_t pid);
 //file methods
 // static int find_fd(struct list * file_list, char * name);
 // static char * find_file_name(struct list *file_list, int fd);
@@ -139,10 +141,15 @@ syscall_handler (struct intr_frame *f)
       get_syscall_args(args, f->esp, 1);
       close((int)args[0]); 
       break;
-    // case SYS_WAIT:
-    //   get_syscall_args(args, f->esp, 1);
-    //   f->eax = wait(args[0]);
-    //   break;
+    case SYS_EXEC:
+      get_syscall_args(args, f->esp, 1);
+      check_pointer_no_ret((int *)args[0]);
+      f->eax = exec((const char*)args[0]);
+      break;
+    case SYS_WAIT:
+      get_syscall_args(args, f->esp, 1);
+      f->eax = wait(args[0]);
+      break;
   	default:
   		printf("unhandled syscall number %d\n", *sys_call);
   		thread_exit ();
@@ -164,6 +171,10 @@ static int write(int fd, const void *buffer, unsigned size) {
     }
   }
 	return 0;
+}
+
+static int wait(pid_t pid) {
+  return process_wait(pid);
 }
 
 static void exit(int status) {
@@ -272,5 +283,9 @@ static struct file_list_data * find_file_data(struct list * file_list, int fd) {
       }
     }
     return NULL;
+}
+
+static pid_t exec(const char * cmd_line) {
+  return (pid_t)process_execute(cmd_line);
 }
 
