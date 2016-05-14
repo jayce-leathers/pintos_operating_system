@@ -501,6 +501,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->donation_list);
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
+  list_init(&t->file_list);
   intr_set_level (old_level);
 }
 
