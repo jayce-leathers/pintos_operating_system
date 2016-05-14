@@ -100,6 +100,7 @@ syscall_handler (struct intr_frame *f)
   switch(*sys_call) {
   	case SYS_WRITE:
       get_syscall_args(args, f->esp, 3);
+      check_pointer_no_ret((int *)args[1]);
   		f->eax = write(args[0], (const void*)args[1], (unsigned)args[2]);
   		break;
   	case SYS_EXIT:
@@ -155,7 +156,12 @@ static int write(int fd, const void *buffer, unsigned size) {
     putbuf((char*)buffer, size);
     return size;
   } else {
-    printf("system call: sys_write() (not fd 1)\n");
+    struct file_list_data * file = find_file_data(&thread_current()->file_list,fd);
+    if(!file) {
+      return -1;
+    } else {
+      return file_write(file->file_struct, buffer, size);
+    }
   }
 	return 0;
 }
