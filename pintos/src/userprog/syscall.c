@@ -10,9 +10,10 @@
 #include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "threads/synch.h"
 
+//Forward function declarations
 static void syscall_handler (struct intr_frame *);
-
 static int write(int fd, const void *buffer, unsigned size);
 static void exit(int status);
 static void halt(void);
@@ -25,14 +26,13 @@ static int filesize(int fd);
 static int read(int fd, void *buffer, unsigned size);
 static pid_t exec(const char * cmd_line);
 static int wait(pid_t pid);
-//file methods
-// static int find_fd(struct list * file_list, char * name);
-// static char * find_file_name(struct list *file_list, int fd);
-// static struct file * find_file(struct list *file_list, int fd);
+static void seek(int fd, unsigned position);
+static unsigned tell (int fd);
 
+//file method searches the given file List for the specified file descriptor
 static struct file_list_data * find_file_data(struct list * file_list, int fd); 
 
-static int fd_next;
+static int fd_next;//next file descriptor value
 const int MAX_ARGS = 128;
 const int USER_BASE = 0x08048000;
 
@@ -149,6 +149,14 @@ syscall_handler (struct intr_frame *f)
     case SYS_WAIT:
       get_syscall_args(args, f->esp, 1);
       f->eax = wait(args[0]);
+      break;
+    case SYS_SEEK:
+      get_syscall_args(args, f->esp, 2);
+      seek((int)args[0],(unsigned)args[1]);
+      break;
+    case SYS_TELL:
+      get_syscall_args(args, f->esp, 1);
+      f->eax = tell((int)args[0]);
       break;
   	default:
   		printf("unhandled syscall number %d\n", *sys_call);
@@ -287,5 +295,25 @@ static struct file_list_data * find_file_data(struct list * file_list, int fd) {
 
 static pid_t exec(const char * cmd_line) {
   return (pid_t)process_execute(cmd_line);
+}
+
+static void 
+seek(int fd, unsigned position) {
+struct file_list_data * file = find_file_data(&thread_current()->file_list, fd);
+  if (!file) {
+    return -1;
+  } else {
+    file_seek(file->file_struct, position);
+  }
+}
+
+static unsigned
+tell(int fd) {
+  struct file_list_data * file = find_file_data(&thread_current()->file_list, fd);
+  if (!file) {
+    return -1;
+  } else {
+    return (int)file_tell(file->file_struct);
+  }
 }
 
