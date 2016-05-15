@@ -15,7 +15,7 @@
 //Forward function declarations
 static void syscall_handler (struct intr_frame *);
 static int write(int fd, const void *buffer, unsigned size);
-static void exit(int status);
+// static void exit(int status);
 static void halt(void);
 static bool create(const char * file ,unsigned initial_size);
 static int open(const char * file);
