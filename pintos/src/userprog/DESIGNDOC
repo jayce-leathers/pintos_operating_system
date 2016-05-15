@@ -8,14 +8,15 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Tim Brown <timbrown@vassar.edu>
+Jayce Rudig-Leathers <jarudigleathers@vassar.edu>
 
 ---- PRELIMINARIES ----
 
 >> If you have any preliminary comments on your submission, notes for
 >> me, or extra credit, please give them here.
+
+We implemented the file systems calls, and left exec and wait unimplemented
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
@@ -30,13 +31,27 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+It doesn't appear that we added any file-wide code for this? Just local
+things within setup_stack.
+
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
-Within setup_stack in process.c we create a kernel page and then loop through the commandline string parsing it into the command name and args. We copy these into the kernel page and save the user addresses (the elements of argv[]) into an array. We then add a word align if necessary and then a null sentinel. We loop through the elements of argv[] in reverse order and copy them all to stack. This ensures that they will be the right order. To avoid overflowing the stack page we set a max number of arguments (128). 
+We pass in a string representing the command line to setup_stack. Setup stack gets a page of kernel
+memory, tokenizes the command line string, and pushes each token onto the stack. The future userspace address
+of each token is stored in an array called argv, for use later. We also increment argc to keep track
+of how many arguments there are.
+
+We keep an offset to determine where we are currently pushing onto the stack, and this offset is incremented
+after every push. We next check if the page needs to be word-aligned, and add 0s to the stack if so. After this,
+we add a null sentinel.
+
+We iterate through argv in reverse, so that the address are pushed onto the stack in the right order. We avoid
+overflowing the stack page by setting the maximum number of arguments to 128.
 
 ---- RATIONALE ----
 
@@ -59,14 +74,74 @@ It minimizes the amount of code which has to run in kernel space. It would also 
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+---In syscall:
+
+//Struct containing a list_elem,
+//file descriptor, file name, and
+//file struct. We keep a list of these,
+//and use it to find files based on their
+//file descriptor
+
+struct file_list_data {
+  struct list_elem elem;
+  int fd;
+  struct file * file_struct;
+  const char * file_name;
+};
+
+//Finds a file on the file_list given its fd
+static struct file_list_data * find_file_data(struct list * file_list, int fd); 
+
+//Checks a pointer's validity
+static void check_pointer(int* ptr);
+
+//Gets argc arguments from the stack, and stores them in args[]
+static void get_syscall_args (int* args, void* esp, int argc);
+
+//Global filesystem lock
+static struct lock file_sys_lock;
+
+//Next file descriptor value
+static int fd_next;
+
+//Max number of arguments
+const int MAX_ARGS = 128;
+
+//First available file descriptor (0 and 1 are reserved)
+const int FIRST_FD = 2;
+
+//Define lowest point in user memory
+const int USER_BASE = 0x08048000;
+
+//Initializes our file data struct with given values
+static void init_file_data(struct file_list_data * f, int fd, struct file * file_struct, const char * file_name);
+
+---In thread.c
+
+//List of open files in thread
+struct list file_list;
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+Each thread has a list called file_list. This file_list consists of
+file_list_data structs, which store a file name, a file descriptor,
+a file struct, and a list_elem. Opening a file adds an entry to this list
+and closing it removes the entry. File descriptors are only unique
+within a single process.
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
+We have a function called get_syscall_args which extracts a specified
+number of arguments from the stack. Any time we encounter a user-supplied
+pointer, we check that it is within user space and is mapped. Whenever
+we encounter such a bad pointer, we terminate the process. Our syscalls
+generally verify that they've received full and correct input from the user,
+and then delegate their work to the pre-written filesys functions.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -75,8 +150,18 @@ It minimizes the amount of code which has to run in kernel space. It would also 
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+We check the return type of pagedir_get_page every time we check pointers,
+to verify that the memory is not unmapped. The least number of calls for
+4096 bytes would be 1, and the max would be 1024. For two bytes, the min
+would be 0 and the max would be 1. I am unsure if there is room for improvement
+in these numbers, as well as whether these numbers are correct.
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+We call timer_sleep(100), to give it a fixed amount of time to wait.
+While this implementation may not be entirely correct, one can't help but
+admire its simplicity.
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -92,12 +177,25 @@ It minimizes the amount of code which has to run in kernel space. It would also 
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+We simply check pointer values at the beginning of the syscall, and any
+time we are getting user data from the stack. These calls have been abstracted
+into our check_pointers function, which reduces the amount of error handling code.
+In terms of resources, we either perform these checks before the resources have been
+allocated, or minimize the amount of time that syscalls have such resources.
+
+For example, we only acquire the global file system lock immediately before invoking a pre-written
+filesys function, and we release it immediately afterwards. The lock would never even be
+acquired in the first place if there were unchecked user pointers, thus the thread won't
+exit while still holding the lock.
+
 ---- SYNCHRONIZATION ----
 
 >> B7: The "exec" system call returns -1 if loading the new executable
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
+
+We did not implement this.
 
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -106,16 +204,33 @@ It minimizes the amount of code which has to run in kernel space. It would also 
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
+We did not implement this.
+
 ---- RATIONALE ----
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+Our approach, having a dedicated function to get command line arguments,
+simplifies a lot of code for us. We're able to just specify how many
+arguments we need from the stack, and then verify their contents before
+using them.
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+Our design for file descriptors is very simple. We simply start fd_next
+at 2, and always increment it whenever a new file is opened. This prevents
+any fighting over fd values, since it is always just increasing.
+
+One disadvantage of this is that file descriptors are only unique within a 
+process. Also, if the number of files opened was greater that INTEGER_MAX,
+we would have an issue.
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+We did not change it. We appreciated the simplicity of the identity mapping.
 
                SURVEY QUESTIONS
                ================

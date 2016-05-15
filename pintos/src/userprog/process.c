@@ -95,7 +95,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  //while(1);
+  //A truly horrible hack to let this wait for a finite amount of time
   timer_sleep(50);
   return 1;
 }
@@ -462,13 +462,12 @@ setup_stack (void **esp, const char *file_name)
       //Mutable copy of the file name and args
       char name_and_args[strlen(file_name)];
       strlcpy(name_and_args, file_name, strlen(file_name)+1);
-      //printf("n&a: %s\n", name_and_args);
       char *token, *save_ptr;
 
       //Parse tokens, and add to top of stack in L->R order
+      //(earlier tokens will appear at the top of the stack)
       for (token = strtok_r(name_and_args, " ", &save_ptr);
         token != NULL;token = strtok_r (NULL, " ", &save_ptr)) {
-        //printf("%s\n", token);
         offset += strlen(token) * sizeof(*token) + 1;
         argv[argc] = (char*)PHYS_BASE-offset;
         strlcpy((char*)kpage+PGSIZE-offset, token, strlen(token)+1);
@@ -499,14 +498,14 @@ setup_stack (void **esp, const char *file_name)
       offset += sizeof(argc);
       memcpy(kpage+PGSIZE-offset, &argc, sizeof(argc));
 
-      //Set esp
+      //Increment it one last time so esp gets set to the correct location
       offset += sizeof(token);
 
+      //Install the page
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
      
       if (success) {
         *esp = PHYS_BASE - offset;
-        //hex_dump((uintptr_t)PHYS_BASE - PGSIZE, kpage, PGSIZE, true);
       }
       else {
         palloc_free_page (kpage);

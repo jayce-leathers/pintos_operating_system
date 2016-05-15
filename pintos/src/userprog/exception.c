@@ -149,7 +149,8 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  if(user) {
+  //Explicitly calls thread_exit() and prints the correct exit message
+  if(user || not_present) {
     printf ("%s: exit(%d)\n", thread_current()->name, -1);
     thread_exit();
   }

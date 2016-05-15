@@ -9,7 +9,6 @@ struct file_list_data {
   const char * file_name;
 };
 
-static void exit(int);
 void syscall_init (void);
 typedef int pid_t;
 #endif /* userprog/syscall.h */
