@@ -43,7 +43,7 @@ process_execute (const char *cmd_line)
   //Tokenizes the cmd_line and gets the first argument
   char *save_ptr;
   char *file_name;
-  file_name = strtok_r (cmd_line, " ", &save_ptr);;
+  file_name = strtok_r ((char*)cmd_line, " ", &save_ptr);;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, cm_copy);
@@ -93,7 +93,7 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid) 
+process_wait (tid_t child_tid UNUSED) 
 {
   //A truly horrible hack to let this wait for a finite amount of time
   timer_sleep(50);
@@ -474,7 +474,7 @@ setup_stack (void **esp, const char *file_name)
         argc++;
       }
 
-      //Preemptively align the remainder of the stack
+      //Pre-emptively align the remainder of the stack
       if(offset % 4 > 0)
         offset += (4 - offset % 4);
 
@@ -490,7 +490,7 @@ setup_stack (void **esp, const char *file_name)
       }
       
       //Push argv
-      int last_offset = PHYS_BASE-offset;
+      int last_offset = (int)PHYS_BASE-offset;
       offset += sizeof(last_offset);
       memcpy(kpage+PGSIZE-offset, &last_offset, sizeof(last_offset));
 
