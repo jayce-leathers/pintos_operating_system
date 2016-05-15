@@ -12,6 +12,7 @@ test_main (void)
 {
   char *p = get_bad_boundary ();
   p--;
+  msg("p = %p\n", p);
   *p = 100;
 
   /* Invoke the system call. */

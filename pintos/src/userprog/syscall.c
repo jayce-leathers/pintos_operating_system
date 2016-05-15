@@ -65,7 +65,7 @@ get_syscall_args (int* args, void* esp, int argc) {
 static void 
 check_pointer_no_ret(int* ptr) {
   //printf("cp ptr: %p\n", ptr);
-  if(ptr >= PHYS_BASE - sizeof(ptr) || ptr < USER_BASE || !pagedir_get_page(thread_current()->pagedir, ptr)) {
+  if(ptr >= PHYS_BASE - sizeof(ptr) || ptr <= USER_BASE || !pagedir_get_page(thread_current()->pagedir, ptr)) {
     // if(ptr >= PHYS_BASE - sizeof(ptr))
     //   printf("failed pointer, too high: %p\n", ptr);
 
@@ -328,7 +328,7 @@ static void
 seek(int fd, unsigned position) {
 struct file_list_data * file = find_file_data(&thread_current()->file_list, fd);
   if (!file) {
-    return -1;
+    
   } else {
     lock_acquire(&file_sys_lock);
     file_seek(file->file_struct, position);
