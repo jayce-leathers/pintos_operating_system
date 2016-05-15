@@ -31,6 +31,7 @@ static unsigned tell (int fd);
 
 //file method searches the given file List for the specified file descriptor
 static struct file_list_data * find_file_data(struct list * file_list, int fd); 
+static struct lock file_sys_lock;
 
 static int fd_next;//next file descriptor value
 const int MAX_ARGS = 128;
@@ -47,6 +48,7 @@ void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  lock_init(&file_sys_lock);
   fd_next = 2;
 }
 
@@ -175,7 +177,11 @@ static int write(int fd, const void *buffer, unsigned size) {
     if(!file) {
       return -1;
     } else {
-      return file_write(file->file_struct, buffer, size);
+      int result;
+      lock_acquire(&file_sys_lock);
+      result = file_write(file->file_struct, buffer, size);
+      lock_release(&file_sys_lock);
+      return result;
     }
   }
 	return 0;
@@ -205,18 +211,28 @@ static bool create(const char * file ,unsigned initial_size) {
   if(!file) {
     exit(-1);
   }
-  return filesys_create(file, initial_size);
+  bool result;
+  lock_acquire(&file_sys_lock);
+  result = filesys_create(file, initial_size);
+  lock_release(&file_sys_lock);
+  return result;
 }
 
 static bool remove(const char * file) {
   if(!file) {
     exit(-1);
   }
-  return filesys_remove(file);
+  bool result;
+  lock_acquire(&file_sys_lock);
+  result = filesys_remove(file);
+  lock_release(&file_sys_lock);
+  return result;
 }
 
 static int open(const char * file) {
+  lock_acquire(&file_sys_lock);
   struct file *file_struct = filesys_open(file);
+  lock_release(&file_sys_lock);
   if(!file_struct) {
     return -1;
   } else {
@@ -225,8 +241,8 @@ static int open(const char * file) {
     struct file_list_data * new_file;
     new_file = malloc(sizeof(struct file_list_data));
     init_file_data(new_file,fd, file_struct,file);
-    struct list file_list = thread_current()->file_list;
-    list_push_back(&file_list, &new_file->elem);
+    struct list * file_list = &thread_current()->file_list;
+    list_push_back(file_list, &new_file->elem);
     // printf("opened file:%i\n",fd);
     return fd;
   }
@@ -234,15 +250,17 @@ static int open(const char * file) {
 static void close(int fd) {
   struct file_list_data * file = find_file_data(&thread_current()->file_list, fd);
   if(!file) {
-    // printf("file is null\n");
+    exit(-1);
   } else {
-    // printf("list size = %i\n", list_size(&thread_current()->file_list));
+    // printf("list not null\n");
     list_remove(&file->elem);
     // printf("list size = %i\n", list_size(&thread_current()->file_list));
     // printf("removed file:%i name = %s\n",fd,file->file_name);
+    lock_acquire(&file_sys_lock);
     file_close(file->file_struct);
+    lock_release(&file_sys_lock);
     // printf("closed file:%i\n",fd);
-    free(file);
+    // free(file);
   }
 }
 
@@ -251,7 +269,11 @@ static int filesize(int fd) {
   if (!file) {
     return -1;
   } else {
-    return file_length(file->file_struct);
+    int result;
+    lock_acquire(&file_sys_lock);
+    result = file_length(file->file_struct);
+    lock_release(&file_sys_lock);
+    return result;
   }
 }
 
@@ -266,7 +288,11 @@ static int read(int fd, void *buffer, unsigned size) {
   }
   else {
     // printf("read from file:%i\n",fd);
-    return file_read(file->file_struct,buffer,size);
+    int result;
+    lock_acquire(&file_sys_lock);
+    result = file_read(file->file_struct,buffer,size);
+    lock_release(&file_sys_lock);
+    return result;
   }
 }
 
@@ -282,10 +308,11 @@ static struct file_list_data * find_file_data(struct list * file_list, int fd) {
     return NULL;
   }
   // printf("list not empty\n");
-  struct list_elem  *e;
+  struct list_elem  *e = NULL;
   for (e = list_begin (file_list);e != list_end (file_list);e = list_next (e))
     {
       struct file_list_data *f = list_entry (e, struct file_list_data, elem);
+      // printf("filename: %s fd: %i\n", f->file_name, f->fd);
       if(f->fd == fd) {
         return f;
       }
@@ -303,7 +330,9 @@ struct file_list_data * file = find_file_data(&thread_current()->file_list, fd);
   if (!file) {
     return -1;
   } else {
+    lock_acquire(&file_sys_lock);
     file_seek(file->file_struct, position);
+    lock_release(&file_sys_lock);
   }
 }
 
@@ -313,7 +342,11 @@ tell(int fd) {
   if (!file) {
     return -1;
   } else {
-    return (int)file_tell(file->file_struct);
+    int result;
+    lock_acquire(&file_sys_lock);
+    result = (int)file_tell(file->file_struct);
+    lock_release(&file_sys_lock);
+    return result;
   }
 }
 
